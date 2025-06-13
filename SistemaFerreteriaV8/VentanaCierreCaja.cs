@@ -46,7 +46,7 @@ namespace SistemaFerreteriaV8
                 }
 
                 // Buscar la caja activa async (esto no bloquea el UI)
-                nueva = await Task.Run(() => new Caja().BuscarPorClaveAsync("estado", "true"));
+                nueva = await Task.Run(() =>  Caja.BuscarPorClaveAsync("estado", "true"));
 
                 // Verificar si existe una caja activa
                 if (nueva == null)

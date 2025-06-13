@@ -2,10 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -13,125 +11,133 @@ namespace SistemaFerreteriaV8
 {
     public partial class VentanaInventario : Form
     {
-        int paginaActual = 1;
-        static int ProductoXPagina = 20;
+        private int paginaActual = 1;
+        private const int ProductosPorPagina = 20;
+
         public VentanaInventario()
         {
             InitializeComponent();
         }
 
-        private void groupBox1_Enter(object sender, EventArgs e)
+        private async void VentanaInventario_Load(object sender, EventArgs e)
         {
-
-        }
-
-        private void VentanaInventario_Load(object sender, EventArgs e)
-        {
+            // Estilos y configuración inicial
             BoxFiltrar.ForeColor = Color.White;
             ListaDeProductos.RowsDefaultCellStyle.ForeColor = Color.Black;
             Clave.SelectedIndex = 1;
-            Listar("c");
+
+            // Listar la primera página
+            await ListarAsync();
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Lista productos con paginación y actualiza indicadores.
+        /// </summary>
+        /// <param name="direccion">"Mas", "Menos", o null para recarga.</param>
+        private async Task ListarAsync(string direccion = null)
         {
+            if (direccion == "Mas") paginaActual++;
+            else if (direccion == "Menos" && paginaActual > 1) paginaActual--;
 
-        }
+            // Llamada async al listado paginado
+            var (productos, total) = await Productos.ListarPorPaginaAsync(paginaActual, ProductosPorPagina);
 
-        private void label17_Click(object sender, EventArgs e)
-        {
+            long totalPaginas = Math.Max(1, (total + ProductosPorPagina - 1) / ProductosPorPagina);
+            if (paginaActual < 1) paginaActual = 1;
+            if (paginaActual > totalPaginas) paginaActual = (int)totalPaginas;
 
-        }
-        private void Listar(string suma = null)
-        {
-            var (lista, cantidad) = Productos.ListarPorPagina(paginaActual, ProductoXPagina);
-
-            if (suma == "Mas")
-            {
-                paginaActual++;
-            }
-            else if (suma == "Menos")
-            {
-                paginaActual--;
-            }
-
-            long totalPaginas = (cantidad / ProductoXPagina) <= 1 ? 1 : (cantidad / ProductoXPagina);
-
-            if (paginaActual >= 1 && paginaActual <= totalPaginas)
-            {
-                ListaDeProductos.Rows.Clear();
-                foreach (var item in lista)
-                {
-                    ListaDeProductos.Rows.Add(item.Id, item.Nombre, item.Marca, item.Categoria, item.Costo, item.Cantidad, item.Precio[0], item.Vendido);
-                }
-                TotalProductos.Text = cantidad.ToString();
-                TextPagina.Text = $"{paginaActual} de {totalPaginas}";
-                label16.Text = Productos.CalcularTotalProductosVendidos().ToString("c2").Substring(1);
-                InversionTotal.Text = Productos.CalcularInversion().ToString("c2");
-                GananciaActual.Text = Productos.CalcularGananciasActuales().ToString("c2");
-                GananciaEsperada.Text = Productos.CalcularGananciasEsperadas().ToString("c2");
-            }
-            else
-            {
-                if (suma == "Menos") paginaActual++;
-                else if (suma == "Mas") paginaActual--;
-                TextPagina.Text = $"{paginaActual} de 1";
-            }
-        }
-        private void Listar2()
-        {
+            // Refrescar UI
             ListaDeProductos.Rows.Clear();
-            var (lista, cantidad) = Productos.ListarPorPagina(paginaActual, ProductoXPagina, Clave.Text, TextoABuscar.Text);
-
-            if (0 < paginaActual && paginaActual < (cantidad / ProductoXPagina))
-            { 
-                foreach (var item in lista)
-                {
-                    ListaDeProductos.Rows.Add(item.Id, item.Nombre);
-                }
-                TotalProductos.Text = cantidad.ToString();
-                TextPagina.Text = paginaActual + " de " + (cantidad / ProductoXPagina).ToString();
-                label16.Text = Productos.CalcularTotalProductosVendidos().ToString("c2").Substring(1);
-                InversionTotal.Text = Productos.CalcularInversion().ToString("c2");
-                GananciaActual.Text = Productos.CalcularGananciasActuales().ToString("c2");
-                GananciaEsperada.Text = Productos.CalcularGananciasEsperadas().ToString("c2");
+            foreach (var p in productos)
+            {
+                ListaDeProductos.Rows.Add(
+                    p.Id,
+                    p.Nombre,
+                    p.Marca,
+                    p.Categoria,
+                    p.Costo.ToString("C2"),
+                    p.Cantidad,
+                    p.Precio.FirstOrDefault().ToString("C2"),
+                    p.Vendido
+                );
             }
-         
+
+            TotalProductos.Text = total.ToString();
+            TextPagina.Text = $"{paginaActual} de {totalPaginas}";
+
+            // Consultas async de agregados
+            label16.Text = (await Productos.CalcularTotalProductosVendidosAsync()).ToString("C2").Substring(1);
+            InversionTotal.Text = (await Productos.CalcularInversionAsync()).ToString("C2");
+            GananciaActual.Text = (await Productos.CalcularGananciasActualesAsync()).ToString("C2");
+            GananciaEsperada.Text = (await Productos.CalcularGananciasEsperadasAsync()).ToString("C2");
         }
 
-        private void pictureBox5_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Lista productos filtrados por clave/valor con paginación.
+        /// </summary>
+        private async Task ListarFiltradoAsync()
         {
+            // Validación básica de páginas
+            if (paginaActual < 1) paginaActual = 1;
 
-            Listar("Mas");
+            // Llamada async con filtro
+            var (productos, total) = await Productos.ListarPorPaginaAsync(
+                paginaActual, ProductosPorPagina,
+                clave: Clave.Text, valor: TextoABuscar.Text
+            );
+
+            long totalPaginas = Math.Max(1, (total + ProductosPorPagina - 1) / ProductosPorPagina);
+
+            // Refrescar UI
+            ListaDeProductos.Rows.Clear();
+            foreach (var p in productos)
+            {
+                ListaDeProductos.Rows.Add(p.Id, p.Nombre);
+            }
+
+            TotalProductos.Text = total.ToString();
+            TextPagina.Text = $"{paginaActual} de {totalPaginas}";
+
+            // Estadísticas
+            label16.Text = (await Productos.CalcularTotalProductosVendidosAsync()).ToString("C2").Substring(1);
+            InversionTotal.Text = (await Productos.CalcularInversionAsync()).ToString("C2");
+            GananciaActual.Text = (await Productos.CalcularGananciasActualesAsync()).ToString("C2");
+            GananciaEsperada.Text = (await Productos.CalcularGananciasEsperadasAsync()).ToString("C2");
         }
 
-        private void pictureBox6_Click(object sender, EventArgs e)
-        {
-       
-            Listar("Menos");
-        }
+        private async void pictureBox5_Click(object sender, EventArgs e)
+            => await ListarAsync("Mas");
 
-        private void TextoABuscar_TextChanged(object sender, EventArgs e)
-        {
-            Listar2();
-        }
+        private async void pictureBox6_Click(object sender, EventArgs e)
+            => await ListarAsync("Menos");
 
-        private void Clave_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            Listar2();
-        }
+        private async void TextoABuscar_TextChanged(object sender, EventArgs e)
+            => await ListarFiltradoAsync();
+
+        private async void Clave_SelectedIndexChanged(object sender, EventArgs e)
+            => await ListarFiltradoAsync();
 
         private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
         {
-           
-            ListaDeProductos.Sort(ListaDeProductos.Columns[OrdenarPor.SelectedIndex], ListSortDirection.Ascending);
-              
-
+            // Ordenar la columna seleccionada
+            var col = OrdenarPor.SelectedIndex;
+            if (col >= 0 && col < ListaDeProductos.Columns.Count)
+                ListaDeProductos.Sort(ListaDeProductos.Columns[col], ListSortDirection.Ascending);
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private async void button2_Click(object sender, EventArgs e)
         {
-            Productos.ExportarProductosAExcel();
+            // Guardar diálogo
+            using var dlg = new SaveFileDialog
+            {
+                Filter = "Archivos de Excel (*.xlsx)|*.xlsx",
+                Title = "Exportar Productos a Excel"
+            };
+            if (dlg.ShowDialog() == DialogResult.OK)
+            {
+                await Productos.ExportarProductosAExcelAsync(dlg.FileName);
+                MessageBox.Show($"Productos exportados a {dlg.FileName}", "Exportación completada", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
     }
 }

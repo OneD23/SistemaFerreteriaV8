@@ -381,8 +381,9 @@ namespace SistemaFerreteriaV8.Clases
                 PdfWriter.GetInstance(doc, ms);
                 doc.Open();
 
+                string imagePath = "logo.png"; // Ruta por defecto del logo
                 Configuraciones config = new Configuraciones().ObtenerPorId(1);
-                string imagePath = config.Imagen;
+                if (config != null) {  imagePath = config.Imagen; }
 
                 List<ListProduct> productosTMP = new List<ListProduct>();
                 double totalTemporal = 0;

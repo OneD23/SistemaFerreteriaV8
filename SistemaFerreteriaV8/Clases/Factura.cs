@@ -18,10 +18,6 @@ namespace SistemaFerreteriaV8.Clases
     {
         // Identificador nativo de MongoDB
         [BsonId]
-        public ObjectId ObjectId { get; set; }
-
-        // Id secuencial para mostrar (NO usar como clave primaria real)
-        [BsonElement("Id")]
         public int Id { get; set; }
 
         [BsonElement("RNC")]
@@ -102,9 +98,9 @@ namespace SistemaFerreteriaV8.Clases
 
         public Factura()
         {
-            this.Id = GetNextSequenceValue("facturaid");
+            this.Id = GenerarId(); // Genera un Id único para la factura
             this.Fecha = DateTime.Now;
-            this.ObjectId = ObjectId.GenerateNewId();
+            //this.ObjectId = ObjectId.GenerateNewId();
             // Inicializa lista por defecto
             this.Productos = new List<ListProduct>();
         }
@@ -207,7 +203,7 @@ public static async Task<List<Factura>> ListarFacturasAsync(string clave, string
         }
 
 
-        public static async Task<List<FacturaResumen>> ListarUltimasFacturasAsync()
+        public static async Task<List<Factura>> ListarUltimasFacturasAsync()
         {
             var projection = Builders<Factura>.Projection
                 .Include(f => f.Id)
@@ -218,7 +214,7 @@ public static async Task<List<Factura>> ListarFacturasAsync(string clave, string
             return await collection.Find(FilterDefinition<Factura>.Empty)
                 .Sort(Builders<Factura>.Sort.Descending(f => f.Id))
                 .Limit(15)
-                .Project<FacturaResumen>(projection)
+                .Project<Factura>(projection)
                 .ToListAsync();
         }
 
@@ -227,6 +223,16 @@ public static async Task<List<Factura>> ListarFacturasAsync(string clave, string
             var filter = Builders<Factura>.Filter.Regex("nombreCliente", new BsonRegularExpression(nombre, "i"));
             return await collection.Find(filter)
                 .Sort(Builders<Factura>.Sort.Descending("nombreCliente"))
+                .Skip((pageNumber - 1) * pageSize)
+                .Limit(pageSize)
+                .ToListAsync();
+        }
+
+        public static async Task<List<Factura>> ListarFacturasPorIdAsync(string nombre, int pageNumber, int pageSize)
+        {
+            var filter = Builders<Factura>.Filter.Regex("Id", new BsonRegularExpression(nombre, "i"));
+            return await collection.Find(filter)
+                .Sort(Builders<Factura>.Sort.Descending("Id"))
                 .Skip((pageNumber - 1) * pageSize)
                 .Limit(pageSize)
                 .ToListAsync();
@@ -273,17 +279,30 @@ public static async Task<List<Factura>> ListarFacturasAsync(string clave, string
         #endregion
 
         #region Métodos de utilidades, ejemplo de índice
+
+        public int GenerarId()
+        {
+            var lastId = collection.AsQueryable().OrderByDescending(x => x.Id).Take(1).Select(x => x.Id).FirstOrDefault();
+
+            int newId = (lastId == null) ? 1 : (int)lastId + 1;
+
+            while (collection.Find(x => x.Id == newId).Any())
+            {
+                newId++;
+            }
+            return newId;
+        }
         // Recuerda crear los índices desde Mongo Shell:
         // db.facturas.createIndex({ "Id": 1 })
         // db.facturas.createIndex({ "NombreCliente": 1 })
         // db.facturas.createIndex({ "Fecha": -1 })
         #endregion
-    
 
 
 
 
-public async void GenerarFactura1()
+
+        public async void GenerarFactura1()
         {
             Configuraciones confi = new Configuraciones().ObtenerPorId(1);
             CreaTicket2 factura = new CreaTicket2();
@@ -512,46 +531,51 @@ public async void GenerarFactura1()
             //Encabezdo
 
             //Encabezdo
-            factura.TextoCentro(confi.Nombre != null ? confi.Nombre : "FERRETERIA");
-            factura.TextoCentro(confi.Direccion != null ? confi.Direccion : "");
-            factura.TextoCentro(confi.Telefono != null ? "Tel: " + confi.Telefono : "Tel: 809-487-1244");
-            factura.TextoCentro(confi.Telefono != null ? "RNC:" + confi.RNC : "");
+            factura.TextoCentro(confi != null && confi.Nombre != null ? confi.Nombre : "FERRETERIA");
+            factura.TextoCentro(confi != null && confi.Direccion != null ? confi.Direccion : "");
+            factura.TextoCentro(confi != null && confi.Telefono != null ? "Tel: " + confi.Telefono : "Tel: 809-487-1244");
+            factura.TextoCentro(confi != null && confi.Telefono != null ? "RNC:" + confi.RNC : "");
 
             factura.TextoCentro("");
             factura.TextoIzquierda("Comprobante fiscal");
 
-            if (string.IsNullOrWhiteSpace(this.NFC))
+            if (confi != null)
             {
-                double ultimoNFC = double.Parse(confi.NFCActual);
-                if (ultimoNFC <= double.Parse(confi.NFCFinal))
+                if (string.IsNullOrWhiteSpace(this.NFC))
                 {
-                    // Incrementar ultimoNFC y convertirlo a cadena.
-                    string numeroFormateado = (ultimoNFC + 1).ToString();
+                    double ultimoNFC = double.Parse(confi.NFCActual);
+                    if (ultimoNFC <= double.Parse(confi.NFCFinal))
+                    {
+                        // Incrementar ultimoNFC y convertirlo a cadena.
+                        string numeroFormateado = (ultimoNFC + 1).ToString();
 
-                    // Rellenar con ceros a la izquierda para asegurar una longitud total de 8 caracteres.
-                    numeroFormateado = numeroFormateado.PadLeft(8, '0');
+                        // Rellenar con ceros a la izquierda para asegurar una longitud total de 8 caracteres.
+                        numeroFormateado = numeroFormateado.PadLeft(8, '0');
 
-                    // Usar el número formateado en la factura.
-                    factura.TextoIzquierda("NCF: B01" + numeroFormateado);
+                        // Usar el número formateado en la factura.
+                        factura.TextoIzquierda("NCF: B01" + numeroFormateado);
 
-                    // Actualizar la configuración con el nuevo último NFC.
-                    confi.NFCActual = numeroFormateado;
-                    this.NFC = "B01" + numeroFormateado;
-                    confi.Guardar();
-                    this.ActualizarFacturaAsync();
+                        // Actualizar la configuración con el nuevo último NFC.
+                        confi.NFCActual = numeroFormateado;
+                        this.NFC = "B01" + numeroFormateado;
+                        confi.Guardar();
+                        this.ActualizarFacturaAsync();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Ya alcanzo su secuencia de comprobante fiscal maxima, no se pueden generar mas comprobantes", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
                 }
                 else
                 {
-                    MessageBox.Show("Ya alcanzo su secuencia de comprobante fiscal maxima, no se pueden generar mas comprobantes", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    factura.TextoIzquierda("NCF: B01" + this.NFC);
                 }
             }
-            else
-            {
-                factura.TextoIzquierda("NCF: B01" + this.NFC);
-            }
+            else MessageBox.Show("Todavia este Sistema no se ha configurado para empezar a trabajar! Dirijase a configuraciones para configurar correctamente");
+
 
             //si no hay rnc Registrado
-            if(this.RNC == null || string.IsNullOrEmpty(this.RNC))
+            if (this.RNC == null || string.IsNullOrEmpty(this.RNC))
             {
 
                 string NombreEncontrado = string.Empty;
@@ -597,14 +621,14 @@ public async void GenerarFactura1()
                 if (this != null)
                 {
                     this.RNC = RNCEncontrado;
-                    this.NombreCliente = NombreEncontrado;                
+                    this.NombreCliente = NombreEncontrado;
                 }
                 else
-                {                    
+                {
                     this.RNC = RNCEncontrado;
                     this.NombreCliente = NombreEncontrado;
                 }
-                this.ActualizarFacturaAsync();   
+                this.ActualizarFacturaAsync();
             }
 
             factura.TextoIzquierda("Valido Hasta: " + confi.FechaExpiracion.ToShortDateString());
@@ -875,6 +899,43 @@ public async void GenerarFactura1()
             printerClass.PrinterName = confi.Impresora;
             printerClass.Print("");
 */
-        }        
+        }
+
+        // Colección de facturas (ajusta el tipo si es necesario)
+        private static IMongoCollection<BsonDocument> collection2 =
+            new MongoClient(new OneKeys().URI)
+                .GetDatabase("Ferreteria")
+                .GetCollection<BsonDocument>("factura");
+
+        // Este método agrega el campo ObjectId a facturas que no lo tienen
+        public static async Task AsignarObjectIdDesdeIntId()
+        {
+            var filter = Builders<BsonDocument>.Filter.Exists("_id", false);
+            // O si el campo _id sí existe pero tu identificador propio está en otro campo, ajusta el filtro según tu modelo
+
+            // O puedes filtrar por documentos donde el campo ObjectId personalizado no existe:
+            // var filter = Builders<BsonDocument>.Filter.Exists("ObjectId", false);
+
+            var facturasSinObjectId = await collection2.Find(filter).ToListAsync();
+            int contador = 0;
+
+            foreach (var factura in facturasSinObjectId)
+            {
+                // Si tu modelo ya tiene el campo _id como ObjectId, MongoDB lo crea automático.
+                // Si necesitas guardar el int "Id" antiguo, puedes moverlo a otro campo:
+                var update = Builders<BsonDocument>.Update
+                    .Set("_id", ObjectId.GenerateNewId())
+                    .Set("id_antiguo", factura.GetValue("Id", BsonNull.Value));
+                // Elimina el campo "Id" si no lo quieres más:
+                // .Unset("Id");
+
+                await collection2.UpdateOneAsync(
+                    Builders<BsonDocument>.Filter.Eq("Id", factura.GetValue("Id", BsonNull.Value)),
+                    update
+                );
+                contador++;
+            }
+            MessageBox.Show($"Se migraron {contador} facturas a ObjectId.");
+        }
     }   
 }

@@ -1,12 +1,7 @@
-﻿using DocumentFormat.OpenXml.Drawing.Diagrams;
-using SistemaFerreteriaV8.Clases;
+﻿using SistemaFerreteriaV8.Clases;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -15,6 +10,7 @@ namespace SistemaFerreteriaV8
     public partial class VentanaFactura : Form
     {
         public Factura Factura { get; set; }
+
         public VentanaFactura()
         {
             InitializeComponent();
@@ -22,98 +18,117 @@ namespace SistemaFerreteriaV8
 
         private void VentanaFactura_Load(object sender, EventArgs e)
         {
-            if(Factura != null)
+            if (Factura != null)
             {
                 Configuraciones config = new Configuraciones().ObtenerPorId(1);
 
-                Titulo.Text = config.Nombre;
-                DireccionNegocio.Text = config.Direccion;
-                tel.Text = config.Telefono;
+                Titulo.Text = config?.Nombre ?? "";
+                DireccionNegocio.Text = config?.Direccion ?? "";
+                tel.Text = config?.Telefono ?? "";
 
                 string serie = "B02";
-
-                if (Factura.tipoFactura == "Comprobante Fiscal") {
+                if (Factura.TipoFactura == "Comprobante Fiscal")
                     serie = "B01";
-                } else if (Factura.tipoFactura == "Comprobante Gubernamental")
-                {
+                else if (Factura.TipoFactura == "Comprobante Gubernamental")
                     serie = "B15";
-                }
 
-                IdFactura.Text = this.Factura.Id.ToString();
-                NFC.Text = serie + (this.Factura.NFC != null ? this.Factura.NFC.ToString() : "");
-                Valido.Text = config.FechaExpiracion != null ? config.FechaExpiracion.ToString() : "";
-                RNC.Text = config.RNC != null ? config.RNC.ToString() : "";
+                IdFactura.Text = Factura.Id.ToString() ?? "";
+                NFC.Text = serie + (Factura.NFC ?? "");
+                Valido.Text = config?.FechaExpiracion.ToString() ?? "";
+                RNC.Text = config?.RNC ?? "";
 
-                TipoFactura.Text = Factura.tipoFactura.ToString();
+                TipoFactura.Text = Factura.TipoFactura ?? "";
+                RNCCliente.Text = Factura.RNC ?? "";
+                Cliente.Text = Factura.NombreCliente ?? "";
+                Direccion.Text = Factura.Direccion ?? "";
+                Fecha.Text = Factura.Fecha != null ? Factura.Fecha.ToString() : "";
 
-                RNCCliente.Text = Factura.RNC != null ? Factura.RNC.ToString() : "";
-                Cliente.Text = Factura.NombreCliente != null ? Factura.NombreCliente.ToString(): "";
-                Direccion.Text = Factura.Direccion != null ? Factura.Direccion.ToString(): "";
-                Fecha.Text = Factura.Fecha!= null ? Factura.Fecha.ToString(): "";
-
-                foreach (var item in Factura.Productos)
+                if (Factura.Productos != null)
                 {
-                    dataGridView1.Rows.Add(item.Cantidad, item.Producto.Nombre, item.Precio, item.Cantidad * item.Precio);
+                    foreach (var item in Factura.Productos)
+                    {
+                        dataGridView1.Rows.Add(item.Cantidad, item.Producto?.Nombre, item.Precio, item.Cantidad * item.Precio);
+                    }
                 }
                 total.Text = Factura.Total.ToString("c2");
             }
         }
 
-        private void Eliminar_Click(object sender, EventArgs e)
+        private async void Eliminar_Click(object sender, EventArgs e)
         {
-            if(MessageBox.Show("Esta seguro que desea eliminar esta factura", "Aviso", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-            Factura.EliminarFactura(Factura.Id);
+            if (MessageBox.Show("¿Está seguro que desea eliminar esta factura?", "Aviso", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+            {
+              await Factura.EliminarFacturaAsync();
+            }
         }
 
-        public async void RegistrarFactura(/*bool paga*/)
+        /// <summary>
+        /// Actualiza una factura con los datos del grid, solo si ya existe.
+        /// </summary>
+        public async void RegistrarFactura()
         {
-            if (!string.IsNullOrWhiteSpace(IdFactura.Text))
+            if (string.IsNullOrWhiteSpace(IdFactura.Text))
+                return;
+
+            List<ListProduct> listaProducto = new List<ListProduct>();
+
+            foreach (DataGridViewRow item in dataGridView1.Rows)
             {
-                List<ListProduct> listaProducto = new List<ListProduct>();
-                List<double> listaCantidad = new List<double>();
+                if (item.Cells[0]?.Value == null || item.Cells[1]?.Value == null || item.Cells[2]?.Value == null)
+                    continue;
 
-                foreach (DataGridViewRow item in dataGridView1.Rows)
+                string nombre = item.Cells[1].Value?.ToString() ?? "0";
+                string cantidadStr = item.Cells[0].Value?.ToString() ?? "0";
+                string precioStr = item.Cells[2].Value?.ToString() ?? "0";
+
+                if (!double.TryParse(cantidadStr, out double cantidad) ||
+                    !double.TryParse(precioStr, out double precio))
+                    continue;
+
+                Productos productoActual = new Productos().Buscar("nombre", nombre);
+
+                var productos = new ListProduct()
                 {
-                    if (item.Cells[0] != null && item.Cells[0].Value != null)
-                    {
-                        string nombre = !string.IsNullOrWhiteSpace(item.Cells[1].Value.ToString()) ? item.Cells[1].Value.ToString() : "0";
-                        string cantidad = !string.IsNullOrWhiteSpace(item.Cells[0].Value.ToString()) ? item.Cells[0].Value.ToString() : "0";
-                        string precio = !string.IsNullOrWhiteSpace(item.Cells[2].Value.ToString()) ? item.Cells[2].Value.ToString() : "0";
+                    Producto = productoActual,
+                    Cantidad = cantidad,
+                    Precio = precio
+                };
 
-                        Productos productoActual = new Productos().Buscar("nombre", nombre);
-
-                        ListProduct productos = new ListProduct()
-                        {
-                            Producto = productoActual,
-                            Cantidad = double.Parse(cantidad),
-                            Precio = double.Parse(precio)
-                        };
-                        productoActual.Vendido += double.Parse(cantidad);
-                        productoActual.ActualizarProductos();
-                        listaProducto.Add(productos);
-                    }
-                }
-
-                Factura factura = new Factura();
-               
-                if (Factura.Buscar(factura.Id) != null)
+                if (productoActual != null)
                 {
-                    factura.NombreCliente = Cliente.Text;
-                    factura.NombreEmpresa = new Caja().BuscarPorClave("estado", "true").Id;
-                    //IdCliente = !string.IsNullOrWhiteSpace(IdCliente.Text) ? IdCliente.Text : " ",
-                   // factura.Fecha = 
-                    factura.Productos = listaProducto;
-                    factura.Total = double.Parse(total.Text);
-                    //Descuentos = descuentoActivo,
-                    //Description = descripcion.Text,
-                    //Direccion = direccion.Text,
-                   // MetodoDePago = tipoFactura.Text,
-                    //factura.Paga = paga;
-                    //Enviar = N.Checked,
-                    //tipoFactura = tipoFactura.Text,
-
+                    productoActual.Vendido += cantidad;
+                    productoActual.ActualizarProductos();
                 }
-                // facturaActiva = factura;
+                listaProducto.Add(productos);
+            }
+
+            // Busca la factura por ID y la actualiza
+            var factura = await Factura.BuscarAsync(int.Parse(IdFactura.Text));
+
+            if (factura != null)
+            {
+                factura.NombreCliente = Cliente.Text;
+                var caja = await Caja.BuscarPorClaveAsync("estado", "true");
+                factura.NombreEmpresa = caja?.Id ?? "";
+                // factura.IdCliente = ... // si necesitas usarlo
+                // factura.Fecha = ... // si necesitas actualizar la fecha
+                factura.Productos = listaProducto;
+                if (double.TryParse(total.Text, out double totalValue))
+                    factura.Total = totalValue;
+                // factura.Descuentos = ... // si usas descuentos
+                // factura.Description = ... // si tienes descripción
+                // factura.Direccion = ... // si tienes dirección
+                // factura.MetodoDePago = ... // si necesitas actualizar método
+                // factura.Paga = ... // si es necesario
+                // factura.Enviar = ... // si es necesario
+                // factura.tipoFactura = ... // si es necesario
+
+                await factura.ActualizarFacturaAsync();
+                MessageBox.Show("Factura actualizada correctamente.", "Actualización", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("No se encontró la factura para actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -122,73 +137,71 @@ namespace SistemaFerreteriaV8
             RegistrarFactura();
         }
 
-        private void IdFactura_TextChanged(object sender, EventArgs e)
-        {
-
-        }
+        private void IdFactura_TextChanged(object sender, EventArgs e) { }
 
         private void button1_Click(object sender, EventArgs e)
         {
+            // Genera un conduce (reporte de entrega) en PDF
             List<ListProduct> listaProducto = new List<ListProduct>();
 
             foreach (DataGridViewRow item in dataGridView1.Rows)
             {
-                if (item.Cells[0] != null && item.Cells[0].Value != null)
-                {
-                    string nombre = !string.IsNullOrWhiteSpace(item.Cells[1].Value.ToString()) ? item.Cells[1].Value.ToString() : "0";
-                    string cantidad = !string.IsNullOrWhiteSpace(item.Cells[0].Value.ToString()) ? item.Cells[0].Value.ToString() : "0";
-                    string precio = !string.IsNullOrWhiteSpace(item.Cells[2].Value.ToString()) ? item.Cells[2].Value.ToString() : "0";
-                    
-                    Productos productoActual = new Productos().Buscar("nombre", nombre.Trim());
+                if (item.Cells[0]?.Value == null || item.Cells[1]?.Value == null || item.Cells[2]?.Value == null)
+                    continue;
 
-                    ListProduct productos = new ListProduct()
-                    {
-                        Producto = new Productos() { Nombre = nombre},
-                        Cantidad = double.Parse(cantidad),
-                        Precio = double.Parse(precio)
-                    };
-                    
-                    listaProducto.Add(productos);
-                }
+                string nombre = item.Cells[1].Value?.ToString() ?? "0";
+                string cantidadStr = item.Cells[0].Value?.ToString() ?? "0";
+                string precioStr = item.Cells[2].Value?.ToString() ?? "0";
+
+                if (!double.TryParse(cantidadStr, out double cantidad) ||
+                    !double.TryParse(precioStr, out double precio))
+                    continue;
+
+                var productos = new ListProduct()
+                {
+                    Producto = new Productos() { Nombre = nombre },
+                    Cantidad = cantidad,
+                    Precio = precio
+                };
+
+                listaProducto.Add(productos);
             }
-            Reportes n = new Reportes() {FacturaActiva= Factura, productos = listaProducto };
+            var n = new Reportes() { FacturaActiva = Factura, Productos = listaProducto };
             n.GenerarConducePDF();
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            if (Factura.tipoFactura == "Consumo")
+            switch (Factura.TipoFactura)
             {
-                Factura.GenerarFactura();
-            }
-            else if (Factura.tipoFactura == "Comprobante Fiscal")
-            {
-                Factura.GenerarFacturaComprobante();
-            }
-            else if (Factura.tipoFactura == "Comprobante Gubernamental")
-            {
-                Factura.GenerarFacturaGubernamental();
-            }
-            else
-            {
-                Factura.GenerarFactura1();
+                case "Consumo":
+                    Factura.GenerarFacturaAsync();
+                    break;
+                case "Comprobante Fiscal":
+                    Factura.GenerarFacturaComprobante();
+                    break;
+                case "Comprobante Gubernamental":
+                    Factura.GenerarFacturaGubernamental();
+                    break;
+                default:
+                    Factura.GenerarFactura1();
+                    break;
             }
         }
 
         private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
-            double cantidad = 0;
-            double precio = 0;
             double totalActivo1 = 0;
             foreach (DataGridViewRow item in dataGridView1.Rows)
             {
-                if (item != null && item.Cells[0].Value != null && item.Cells[2].Value != null)
+                if (item?.Cells[0]?.Value == null || item.Cells[2]?.Value == null)
+                    continue;
+
+                if (double.TryParse(item.Cells[0].Value.ToString(), out double cantidad) &&
+                    double.TryParse(item.Cells[2].Value.ToString(), out double precio))
                 {
-                    cantidad = double.Parse(item.Cells[0].Value.ToString()); 
-                    precio = double.Parse(item.Cells[2].Value.ToString());
                     item.Cells[3].Value = cantidad * precio;
                     totalActivo1 += cantidad * precio;
-                    
                 }
             }
             total.Text = totalActivo1.ToString("c2");

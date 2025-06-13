@@ -349,7 +349,7 @@ namespace SistemaFerreteriaV8
             CargarLista("Iniciar");
         }
 
-        private void button2_Click_1(object sender, EventArgs e)
+        private async void button2_Click_1(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Archivos RNC (*.xlxs)|*.rnc|Todos los archivos (*.*)|*.*"; // Filtra por extensión .rnc
@@ -361,7 +361,7 @@ namespace SistemaFerreteriaV8
                 string selectedFilePath = openFileDialog.FileName;
                 //openFileDialog.FileName;
 
-                new Productos().CargarProductosEnMongoDB(selectedFilePath);
+               await new Productos().CargarProductosEnMongoDBAsync(selectedFilePath);
             }            
         }
 

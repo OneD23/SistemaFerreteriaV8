@@ -4,9 +4,10 @@ using MongoDB.Driver;
 using ClosedXML.Excel;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Windows.Forms;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace SistemaFerreteriaV8.Clases
 {
@@ -35,429 +36,326 @@ namespace SistemaFerreteriaV8.Clases
         [BsonElement("fechaDeEntrada")]
         public DateTime FechaDeEntrada { get; set; }
 
-        private IMongoCollection<Productos> Collection = new MongoClient(new OneKeys().URI).GetDatabase("Ferreteria").GetCollection<Productos>("Productos");
-
-        public Productos()
-        {          
-            this.Id = GenerarId();         
-            CrearIndices();           
-        }
-
-        private void CrearIndices()
-        {
-            Collection.Indexes.CreateOne(new CreateIndexModel<Productos>(Builders<Productos>.IndexKeys.Ascending(p => p.Nombre)));
-            Collection.Indexes.CreateOne(new CreateIndexModel<Productos>(Builders<Productos>.IndexKeys.Ascending(p => p.Categoria)));
-            Collection.Indexes.CreateOne(new CreateIndexModel<Productos>(Builders<Productos>.IndexKeys.Ascending(p => p.Marca)));
-        }
-        public long ContarProductos()
-        {
-            return Collection.CountDocuments(new BsonDocument());
-        }
-
-        public void InsertarProductos(Productos nuevoProductos)
-        {
-            Collection.InsertOne(nuevoProductos);
-        }
-
-        public void ActualizarProductos()
-        {
-            var filter = Builders<Productos>.Filter.Eq(p => p.Id, this.Id);
-            Collection.ReplaceOne(filter, this);
-        }
-
-        public Productos Buscar(string id)
-        {
-            var filter = Builders<Productos>.Filter.Eq("Id", id);
-            return Collection.Find(filter).FirstOrDefault();
-        }
-
-        public Productos Buscar(string campo, string valor)
-        {
-            var filter = Builders<Productos>.Filter.Eq(campo, valor);
-            return Collection.Find(filter).FirstOrDefault();
-        }
-
-        public void EliminarPorId(string id)
-        {
-            var filter = Builders<Productos>.Filter.Eq("Id", id);
-            Collection.DeleteOne(filter);
-        }
-
-        public List<Productos> Listar()
-        {
-            return Collection.Find(new BsonDocument()).ToList();
-        }
-
-       public static (List<Productos>, long) ListarPorPagina(int numeroPagina, int tamañoPagina)
-{
-    // Validar parámetros
-    if (numeroPagina < 1) numeroPagina = 1;
-    if (tamañoPagina < 1) tamañoPagina = 10; // Tamaño predeterminado
-
-    int salto = (numeroPagina - 1) * tamañoPagina;
-
-    // Obtener la colección
-    IMongoCollection<Productos> Collections =
-        new MongoClient(new OneKeys().URI)
-        .GetDatabase("Ferreteria")
-        .GetCollection<Productos>("Productos");
-
-    // Aplicar índice y ordenar para optimizar la paginación
-    var productos = Collections.Find(new BsonDocument())
-                               .Sort(Builders<Productos>.Sort.Ascending(p => p.Id))
-                               .Skip(salto)
-                               .Limit(tamañoPagina)
-                               .ToList();
-
-    // Usar EstimatedDocumentCount para mejorar el rendimiento
-    long totalProductos = Collections.EstimatedDocumentCount();
-
-    return (productos, totalProductos);
-}
-        public static (List<Productos>, long) ListarPorPagina(int numeroPagina, int tamañoPagina, string clave = null, string valor = null)
-        {
-            // Validar parámetros
-            if (numeroPagina < 1) numeroPagina = 1;
-            if (tamañoPagina < 1) tamañoPagina = 10; // Tamaño predeterminado
-
-            int salto = (numeroPagina - 1) * tamañoPagina;
-
-            // Obtener la colección
-            var collections = new MongoClient(new OneKeys().URI)
-                              .GetDatabase("Ferreteria")
-                              .GetCollection<Productos>("Productos");
-
-            // Construir filtro de búsqueda con coincidencia parcial
-            FilterDefinition<Productos> filtro = Builders<Productos>.Filter.Empty;
-
-            if (!string.IsNullOrEmpty(clave) && !string.IsNullOrEmpty(valor))
-            {
-                filtro = Builders<Productos>.Filter.Regex(clave, new BsonRegularExpression(valor, "i")); // Búsqueda insensible a mayúsculas/minúsculas
-            }
-
-            // Realizar consulta con paginación y ordenación
-            var productos = collections.Find(filtro)
-                                       .Sort(Builders<Productos>.Sort.Descending("_id")) // Ordenar por ID descendente para mantener consistencia en la paginación
-                                       .Skip(salto)
-                                       .Limit(tamañoPagina)
-                                       .ToList();
-
-            long totalProductos = collections.CountDocuments(filtro);
-
-            return (productos, totalProductos);
-        }
-
-        public static double CalcularInversion()
-        {
-            IMongoCollection<Productos> Collections =
-                new MongoClient(new OneKeys().URI)
+        private static readonly IMongoCollection<Productos> _collection =
+            new MongoClient(new OneKeys().URI)
                 .GetDatabase("Ferreteria")
                 .GetCollection<Productos>("Productos");
-            // Pipeline de agregación para sumar (Costo * Cantidad) en MongoDB
-            var pipeline = new[]
-            {
-                new BsonDocument("$project", new BsonDocument
-                 {
-                    { "Inversion", new BsonDocument("$multiply", new BsonArray { "$Costo", "$cantidad" }) }
-                 }),
-             new BsonDocument("$group", new BsonDocument
-             {
-                 { "_id", BsonNull.Value },
-                 { "TotalInversion", new BsonDocument("$sum", "$Inversion") }
-            })
-              };
 
-            // Ejecutar el pipeline de agregación
-            var resultado = Collections.Aggregate<BsonDocument>(pipeline).FirstOrDefault();
-
-            // Retornar la inversión total o 0 si no hay datos
-            return resultado != null ? resultado["TotalInversion"].ToDouble() : 0.0;
+        public Productos()
+        {
+            Id = GenerarId();
+            CrearIndices();
         }
 
-        public static double CalcularGananciasActuales()
+        #region Índices
+        private void CrearIndices()
         {
-            IMongoCollection<Productos> Collections =
-              new MongoClient(new OneKeys().URI)
-              .GetDatabase("Ferreteria")
-              .GetCollection<Productos>("Productos");
+            _collection.Indexes.CreateOne(new CreateIndexModel<Productos>(
+                Builders<Productos>.IndexKeys.Ascending(p => p.Nombre)));
+            _collection.Indexes.CreateOne(new CreateIndexModel<Productos>(
+                Builders<Productos>.IndexKeys.Ascending(p => p.Categoria)));
+            _collection.Indexes.CreateOne(new CreateIndexModel<Productos>(
+                Builders<Productos>.IndexKeys.Ascending(p => p.Marca)));
+        }
+        #endregion
 
-            // Pipeline de agregación para calcular las ganancias
+        #region CRUD Síncrono
+        public long ContarProductos() => _collection.CountDocuments(Builders<Productos>.Filter.Empty);
+        public void InsertarProductos(Productos prod) => _collection.InsertOne(prod);
+        public void ActualizarProductos() => _collection.ReplaceOne(p => p.Id == this.Id, this);
+        public Productos Buscar(string id) => _collection.Find(p => p.Id == id).FirstOrDefault();
+        public Productos Buscar(string campo, string valor) =>
+            _collection.Find(Builders<Productos>.Filter.Eq(campo, valor)).FirstOrDefault();
+        public void EliminarPorId(string id) => _collection.DeleteOne(p => p.Id == id);
+        public List<Productos> Listar() => _collection.Find(Builders<Productos>.Filter.Empty).ToList();
+        #endregion
+
+        #region CRUD Async
+        public static async Task<long> ContarProductosAsync() =>
+            await _collection.CountDocumentsAsync(Builders<Productos>.Filter.Empty);
+
+        public static async Task InsertarProductosAsync(Productos prod) =>
+            await _collection.InsertOneAsync(prod);
+
+        public async Task ActualizarProductosAsync() =>
+            await _collection.ReplaceOneAsync(p => p.Id == this.Id, this);
+
+        public static async Task<Productos> BuscarAsync(string id) =>
+            await _collection.Find(p => p.Id == id).FirstOrDefaultAsync();
+
+        public static async Task<Productos> BuscarPorClaveAsync(string campo, string valor) =>
+            await _collection.Find(Builders<Productos>.Filter.Eq(campo, valor)).FirstOrDefaultAsync();
+
+        public static async Task<List<Productos>> ListarAsync() =>
+            await _collection.Find(Builders<Productos>.Filter.Empty).ToListAsync();
+
+        public static async void TaskEliminarAsync(string id) =>
+            await _collection.DeleteOneAsync(p => p.Id == id);
+
+        #endregion
+
+        #region Paginación
+        public static async Task<(List<Productos> Productos, long Total)> ListarPorPaginaAsync(
+            int numeroPagina, int tamañoPagina, string clave = null, string valor = null)
+        {
+            if (numeroPagina < 1) numeroPagina = 1;
+            if (tamañoPagina < 1) tamañoPagina = 10;
+            int skip = (numeroPagina - 1) * tamañoPagina;
+
+            var filter = Builders<Productos>.Filter.Empty;
+            if (!string.IsNullOrWhiteSpace(clave) && !string.IsNullOrWhiteSpace(valor))
+            {
+                filter = Builders<Productos>.Filter.Regex(clave, new BsonRegularExpression(valor, "i"));
+            }
+
+            var productos = await _collection.Find(filter)
+                .SortByDescending(p => p.Id)
+                .Skip(skip)
+                .Limit(tamañoPagina)
+                .ToListAsync();
+
+            var total = await _collection.CountDocumentsAsync(filter);
+            return (productos, total);
+        }
+        #endregion
+
+        #region Agregaciones
+
+        public static async Task<double> CalcularInversionAsync()
+        {
             var pipeline = new[]
             {
-            new BsonDocument("$project", new BsonDocument
+                new BsonDocument("$project",
+                  new BsonDocument("Inversion",
+                    new BsonDocument("$multiply", new BsonArray{"$Costo","$cantidad"}))),
+                new BsonDocument("$group",
+                  new BsonDocument
+                    { { "_id", BsonNull.Value }, { "TotalInversion", new BsonDocument("$sum","$Inversion") } })
+            };
+            var result = await _collection.Aggregate<BsonDocument>(pipeline).FirstOrDefaultAsync();
+            return result?["TotalInversion"].ToDouble() ?? 0;
+        }
+
+        public static async Task<double> CalcularGananciasActualesAsync()
+        {
+            var pipeline = new[]
             {
-                { "Ganancia", new BsonDocument("$multiply", new BsonArray
+        // 1) Proyectamos la ganancia: (avg(precio) – Costo) * vendido
+        new BsonDocument("$project",
+            new BsonDocument("Ganancia",
+                new BsonDocument("$multiply", new BsonArray
+                {
+                    // aquí calculamos el promedio de todos los elementos de precio
+                    new BsonDocument("$subtract", new BsonArray
                     {
-                        new BsonDocument("$subtract", new BsonArray { new BsonDocument("$arrayElemAt", new BsonArray { "$precio", 0 }), "$Costo" }),
-                        "$vendido"
-                    })
-                }
-            }),
-            new BsonDocument("$group", new BsonDocument
+                        new BsonDocument("$avg", "$precio"),
+                        // si Costo no es numérico en la BD, puedes convertirlo:
+                        // new BsonDocument("$toDouble", "$Costo")
+                        "$Costo"
+                    }),
+                    // igual para vendido, convierte si fuese necesario:
+                    // new BsonDocument("$toDouble", "$vendido")
+                    "$vendido"
+                })
+            )
+        ),
+        // 2) Agrupamos todos los documentos y sumamos la ganancia parcial
+        new BsonDocument("$group",
+            new BsonDocument
             {
                 { "_id", BsonNull.Value },
                 { "TotalGanancia", new BsonDocument("$sum", "$Ganancia") }
-                })
-            };
+            }
+        )
+    };
 
-            // Ejecutar el pipeline de agregación
-            var resultado = Collections.Aggregate<BsonDocument>(pipeline).FirstOrDefault();
+            var result = await _collection
+                .Aggregate<BsonDocument>(pipeline)
+                .FirstOrDefaultAsync();
 
-            // Retornar la ganancia total o 0 si no hay datos
-            return resultado != null ? resultado["TotalGanancia"].ToDouble() : 0.0;
+            return result?["TotalGanancia"].ToDouble() ?? 0;
         }
-        public static double CalcularGananciasEsperadas()
-        {
-            IMongoCollection<Productos> Collections =
-            new MongoClient(new OneKeys().URI)
-            .GetDatabase("Ferreteria")
-            .GetCollection<Productos>("Productos");
 
-            // Pipeline de agregación para calcular las ganancias esperadas
+
+        public static async Task<double> CalcularGananciasEsperadasAsync()
+        {
             var pipeline = new[]
             {
-                new BsonDocument("$project", new BsonDocument
+        // 1) Proyectamos la ganancia esperada: (avg(precio) – Costo) * cantidad
+        new BsonDocument("$project",
+            new BsonDocument("GananciaEsperada",
+                new BsonDocument("$multiply", new BsonArray
                 {
-                    { "GananciaEsperada", new BsonDocument("$multiply", new BsonArray
-                        {
-                            new BsonDocument("$subtract", new BsonArray { new BsonDocument("$arrayElemAt", new BsonArray { "$precio", 0 }), "$Costo" }),
-                            "$cantidad"
-                        })
-                    }
-                }),
-                new BsonDocument("$group", new BsonDocument
-                {
-                    { "_id", BsonNull.Value },
-                    { "TotalGananciaEsperada", new BsonDocument("$sum", "$GananciaEsperada") }
+                    new BsonDocument("$subtract", new BsonArray
+                    {
+                        // Promedio de todos los precios del array
+                        new BsonDocument("$avg", "$precio"),
+                        // Si Costo no es numérico en BD, usa: new BsonDocument("$toDouble", "$Costo")
+                        "$Costo"
+                    }),
+                    // Multiplicamos por la cantidad
+                    "$cantidad"
                 })
-            };
+            )
+        ),
+        // 2) Agrupamos y sumamos todas las ganancias esperadas
+        new BsonDocument("$group",
+            new BsonDocument
+            {
+                { "_id", BsonNull.Value },
+                { "TotalGananciaEsperada", new BsonDocument("$sum", "$GananciaEsperada") }
+            }
+        )
+    };
 
-            // Ejecutar el pipeline de agregación
-            var resultado = Collections.Aggregate<BsonDocument>(pipeline).FirstOrDefault();
+            var result = await _collection
+                .Aggregate<BsonDocument>(pipeline)
+                .FirstOrDefaultAsync();
 
-            // Retornar la ganancia esperada total o 0 si no hay datos
-            return resultado != null ? resultado["TotalGananciaEsperada"].ToDouble() : 0.0;
+            return result?["TotalGananciaEsperada"].ToDouble() ?? 0;
         }
 
-        public static double CalcularTotalProductosVendidos()
-        {
-            IMongoCollection<Productos> Collections =
-            new MongoClient(new OneKeys().URI)
-            .GetDatabase("Ferreteria")
-            .GetCollection<Productos>("Productos");
 
-            // Pipeline de agregación para calcular el total de productos vendidos
+        public static async Task<double> CalcularTotalProductosVendidosAsync()
+        {
             var pipeline = new[]
             {
-                new BsonDocument("$group", new BsonDocument
-                {
-                    { "_id", BsonNull.Value }, // No agrupar por ningún campo, queremos un total global
-                    { "TotalVendidos", new BsonDocument("$sum", "$vendido") }
-                })
+                new BsonDocument("$group",
+                  new BsonDocument
+                    { { "_id", BsonNull.Value }, { "TotalVendidos", new BsonDocument("$sum","$vendido") } })
             };
-
-            // Ejecutar el pipeline de agregación
-            var resultado = Collections.Aggregate<BsonDocument>(pipeline).FirstOrDefault();
-
-            // Retornar el total de productos vendidos o 0 si no hay datos
-            return resultado != null ? resultado["TotalVendidos"].ToDouble() : 0.0;
+            var result = await _collection.Aggregate<BsonDocument>(pipeline).FirstOrDefaultAsync();
+            return result?["TotalVendidos"].ToDouble() ?? 0;
         }
 
+        #endregion
 
-        public List<Productos> ListarPorNombre(string nombre)
+        #region Estadísticas simples
+
+        public Dictionary<string, double> VendidosPorProductos(int limite = 5)
         {
-            var filter = Builders<Productos>.Filter.Regex("Nombre", new BsonRegularExpression(nombre, "i"));
-            return Collection.Find(filter).Limit(20).ToList();
+            return _collection.Find(Builders<Productos>.Filter.Empty)
+                .SortByDescending(p => p.Vendido)
+                .Limit(limite)
+                .ToList()
+                .ToDictionary(p => p.Nombre, p => p.Vendido);
         }
 
-        public List<Productos> ListarParecidos(string campo, string valor)
+        public Dictionary<string, double> BajaCantidadPorProductos(int limite = 5)
         {
-            var filter = Builders<Productos>.Filter.Regex(campo, new BsonRegularExpression(valor, "i"));
-            return Collection.Find(filter).ToList();
+            return _collection.Find(Builders<Productos>.Filter.Empty)
+                .SortBy(p => p.Cantidad)
+                .Limit(limite)
+                .ToList()
+                .ToDictionary(p => p.Nombre, p => p.Cantidad);
         }
 
-        public Dictionary<string, double> VendidosPorProductos()
+        public Dictionary<string, double> VendidosPorCategoria(int limite = 5)
         {
-            var result = Collection.Find(new BsonDocument()).Sort(Builders<Productos>.Sort.Descending("Vendido")).Limit(5).ToList();
-            var dictionary = new Dictionary<string, double>();
-            foreach (var item in result)
-            {
-                dictionary[item.Nombre] = item.Vendido;
-            }
-            return dictionary;
+            return _collection.Find(Builders<Productos>.Filter.Empty)
+                .SortByDescending(p => p.Vendido)
+                .Limit(limite)
+                .ToList()
+                .GroupBy(p => p.Categoria)
+                .ToDictionary(g => g.Key, g => g.Sum(p => p.Vendido));
         }
 
-        public Dictionary<string, double> BajaCantidadPorProductos()
-        {
-            var result = Collection.Find(new BsonDocument()).Sort(Builders<Productos>.Sort.Ascending("Cantidad")).Limit(5).ToList();
-            var dictionary = new Dictionary<string, double>();
-            foreach (var item in result)
-            {
-                dictionary[item.Nombre] = item.Cantidad;
-            }
-            return dictionary;
-        }
+        #endregion
 
-        public Dictionary<string, double> VendidosPorCategoria()
-        {
-            var result = Collection.Find(new BsonDocument()).Sort(Builders<Productos>.Sort.Descending("Vendido")).Limit(5).ToList();
-            var dictionary = new Dictionary<string, double>();
-            foreach (var item in result)
-            {
-                dictionary[item.Categoria] = item.Vendido;
-            }
-            return dictionary;
-        }
+        #region Importación / Exportación Excel
 
         public List<Productos> LeerProductosDesdeExcel(string path)
         {
             var productos = new List<Productos>();
-            using (var workbook = new XLWorkbook(path))
+            using var wb = new XLWorkbook(path);
+            var ws = wb.Worksheet(1);
+            foreach (var row in ws.RangeUsed().RowsUsed().Skip(1))
             {
-                var worksheet = workbook.Worksheet(1);
-                var rows = worksheet.RangeUsed().RowsUsed().Skip(1);
-
-                foreach (var row in rows)
+                var prod = new Productos
                 {
-                    var producto = new Productos
+                    Id = row.Cell(1).GetString(),
+                    Nombre = row.Cell(2).GetString(),
+                    Descripcion = row.Cell(3).GetString(),
+                    Categoria = row.Cell(4).GetString(),
+                    Marca = row.Cell(5).GetString(),
+                    Precio = new List<double>
                     {
-                        Id = row.Cell(1).Value.ToString(),
-                        Nombre = row.Cell(2).Value.ToString(),
-                        Descripcion = row.Cell(3).Value.ToString(),
-                        Categoria = row.Cell(4).Value.ToString(),
-                        Marca = row.Cell(5).Value.ToString(),
-                        Precio = new List<double>
-                        {
-                            double.Parse(row.Cell(6).Value.ToString()),
-                            double.Parse(row.Cell(7).Value.ToString())
-                        },
-                        Costo = double.Parse(row.Cell(8).Value.ToString()),
-                        Cantidad = double.Parse(row.Cell(9).Value.ToString()),
-                        Vendido = double.Parse(row.Cell(10).Value.ToString()),
-                        Descuento = 0,
-                        FechaDeEntrada = DateTime.Now
-                    };
-                    productos.Add(producto);
-                }
+                        row.Cell(6).GetDouble(), row.Cell(7).GetDouble(),
+                        row.Cell(8).GetDouble(), row.Cell(9).GetDouble()
+                    },
+                    Costo = row.Cell(10).GetDouble(),
+                    Cantidad = row.Cell(11).GetDouble(),
+                    Vendido = row.Cell(12).GetDouble(),
+                    Descuento = row.Cell(13).GetDouble(),
+                    FechaDeEntrada = DateTime.Now
+                };
+                productos.Add(prod);
             }
             return productos;
         }
 
-        public void CargarProductosEnMongoDB(string pathArchivoExcel)
+        public async Task CargarProductosEnMongoDBAsync(string excelPath)
         {
-            var productos = LeerProductosDesdeExcel(pathArchivoExcel);
-            foreach (var producto in productos)
-            {
-                InsertarProductos(producto);
-            }
+            var list = LeerProductosDesdeExcel(excelPath);
+            if (list == null || !list.Any()) return;
+            await _collection.InsertManyAsync(list);
         }
+
+        public static async Task ExportarProductosAExcelAsync(string rutaArchivo)
+        {
+            var client = new MongoClient(new OneKeys().URI);
+            var col = client.GetDatabase("Ferreteria").GetCollection<Productos>("Productos");
+            var all = await col.Find(Builders<Productos>.Filter.Empty).ToListAsync();
+
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Productos");
+            var headers = new[] { "ID", "Nombre", "Descripción", "Categoría", "Marca", "Precio1", "Precio2", "Precio3", "Precio4", "Costo", "Cantidad", "Vendido", "Descuento", "FechaEntrada" };
+            for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
+            for (int r = 0; r < all.Count; r++)
+            {
+                var p = all[r];
+                ws.Cell(r + 2, 1).Value = p.Id;
+                ws.Cell(r + 2, 2).Value = p.Nombre;
+                ws.Cell(r + 2, 3).Value = p.Descripcion;
+                ws.Cell(r + 2, 4).Value = p.Categoria;
+                ws.Cell(r + 2, 5).Value = p.Marca;
+                for (int i = 0; i < 4; i++) ws.Cell(r + 2, 6 + i).Value = p.Precio.ElementAtOrDefault(i);
+                ws.Cell(r + 2, 10).Value = p.Costo;
+                ws.Cell(r + 2, 11).Value = p.Cantidad;
+                ws.Cell(r + 2, 12).Value = p.Vendido;
+                ws.Cell(r + 2, 13).Value = p.Descuento;
+                ws.Cell(r + 2, 14).Value = p.FechaDeEntrada.ToString("yyyy-MM-dd");
+            }
+            wb.SaveAs(rutaArchivo);
+        }
+
+        #endregion
+
+        #region Generación de ID
 
         private string GenerarId()
         {
-            var lastId = Collection.AsQueryable().OrderByDescending(x => x.Id).Take(1).Select(x => x.Id).FirstOrDefault();
-            string newId = "";
-            if (lastId == null)
-            {
-                newId = "1";
-            }
-            else
-            {
-                int lastIdInt;
-                if (int.TryParse(lastId, out lastIdInt))
-                {
-                    newId = (lastIdInt + 1).ToString();
-                }
-                else
-                {
-                    newId = "000001";
-                }
-            }
-
-            while (Collection.Find(x => x.Id == newId).Any())
-            {
-                int newIdInt;
-                if (int.TryParse(newId, out newIdInt))
-                {
-                    newId = (newIdInt + 1).ToString();
-                }
-            }
-            if (!string.IsNullOrWhiteSpace(newId))
-            {
-                return newId;
-            }
-            else
-            {
+            var last = _collection.AsQueryable()
+                .OrderByDescending(p => p.Id)
+                .Select(p => p.Id)
+                .FirstOrDefault();
+            if (last == null || !int.TryParse(last, out int lastNum))
                 return "1";
-            }
+            var next = (lastNum + 1).ToString();
+            while (_collection.Find(p => p.Id == next).Any())
+                next = (int.Parse(next) + 1).ToString();
+            return next;
         }
+
+        #endregion
+
+        #region Helper no implementado
 
         internal object ObtenerEstadisticas(FilterDefinition<Productos> filtro)
         {
             throw new NotImplementedException();
         }
 
-        public static void ExportarProductosAExcel()
-        {
-            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
-            {
-                saveFileDialog.Filter = "Archivos de Excel (*.xlsx)|*.xlsx";
-                saveFileDialog.Title = "Guardar archivo de productos";
-
-                if (saveFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    string rutaArchivo = saveFileDialog.FileName;
-                    MessageBox.Show("Se estan exportando todos los productos, puede seguir vendiendo con normalidad cuanto el proceso termine se le notificara", "Aviso");
-
-                    // Ejecutar la operación de exportación en un subproceso en segundo plano
-                    Task.Run(() =>
-                    {
-                        IMongoCollection<Productos> Collections =
-                       new MongoClient(new OneKeys().URI)
-                       .GetDatabase("Ferreteria")
-                       .GetCollection<Productos>("Productos");
-
-                        var productos = Collections.Find(new BsonDocument()).ToList();
-
-                        using (var workbook = new XLWorkbook())
-                        {
-                            var worksheet = workbook.Worksheets.Add("Productos");
-
-                            string[] encabezados = { "ID", "Nombre", "Descripción", "Categoría", "Marca", "Precio1", "Precio2", "Precio3", "Precio4", "Costo", "Cantidad", "Vendido", "Descuento", "Fecha de Entrada" };
-                            worksheet.Row(1).Style.Font.Bold = true;
-
-                            for (int i = 0; i < encabezados.Length; i++)
-                            {
-                                worksheet.Cell(1, i + 1).SetValue(encabezados[i]);
-                            }
-
-                            var datos = productos.Select(p => new object[]
-                            {
-                            p.Id,
-                            p.Nombre,
-                            p.Descripcion,
-                            p.Categoria,
-                            p.Marca,
-                            p.Precio.Count > 0 ? p.Precio[0] : 0,
-                            p.Precio.Count > 1 ? p.Precio[1] : 0,
-                            p.Precio.Count > 2 ? p.Precio[2] : 0,
-                            p.Precio.Count > 3 ? p.Precio[3] : 0,
-                            p.Costo,
-                            p.Cantidad,
-                            p.Vendido,
-                            p.Descuento,
-                            p.FechaDeEntrada.ToString("yyyy-MM-dd")
-                            }).ToList();
-
-                            worksheet.Cell(2, 1).InsertData(datos);
-                            worksheet.Columns().AdjustToContents();
-                            workbook.SaveAs(rutaArchivo);
-                            MessageBox.Show("Productos exportados! puede Encontrarlo en la siguiente ubicacion: " + rutaArchivo, "Aviso");
-
-
-                        }
-                    });
-                }
-            }
-        }
+        #endregion
     }
 }

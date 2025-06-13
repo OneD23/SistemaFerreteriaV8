@@ -1,117 +1,99 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SistemaFerreteriaV8.Clases
 {
-   public class Empleado
+    public class Empleado
     {
         [BsonId]
-        public string Id { get; set; }
+        public ObjectId Id { get; set; } // Usa ObjectId para MongoDB performance
 
-        //Nombre
         [BsonElement("nombre")]
         public string Nombre { get; set; }
 
-        //Puesto
         [BsonElement("puesto")]
         public string Puesto { get; set; }
 
-        //Cedula
         [BsonElement("cedula")]
         public string Cedula { get; set; }
 
-        //contrasena
         [BsonElement("contrasena")]
         public string Contrasena { get; set; }
 
-        //Direccion
         [BsonElement("direccion")]
         public string Direccion { get; set; }
 
-        //Telefono
         [BsonElement("telefono")]
         public string Telefono { get; set; }
 
-        //Correo
         [BsonElement("correo")]
         public string Correo { get; set; }
 
-        //Cuenta
         [BsonElement("cuenta")]
         public string Cuenta { get; set; }
 
-        //Fecha
         [BsonElement("fecha")]
-        DateTime fecha { get; set; }
+        public DateTime Fecha { get; set; }
 
-        private readonly IMongoCollection<Empleado> _EmpleadoCollection;
+        private static IMongoCollection<Empleado> EmpleadoCollection =>
+            new MongoClient(new OneKeys().URI)
+                .GetDatabase("Ferreteria")
+                .GetCollection<Empleado>("Empleado");
 
-        public Empleado()
+        public Empleado() { }
+
+        // Métodos Async Modernos
+
+        public async Task CrearAsync()
         {
-
-            _EmpleadoCollection = new MongoClient(new OneKeys().URI).GetDatabase("Ferreteria").GetCollection<Empleado>("Empleado");
+            await EmpleadoCollection.InsertOneAsync(this);
         }
 
-        public void Crear()
+        public async Task EditarAsync()
         {
-            _EmpleadoCollection.InsertOne(this);
+            await EmpleadoCollection.ReplaceOneAsync(e => e.Id == this.Id, this);
         }
 
-        public void Editar()
+        public async Task EliminarAsync()
         {
-            _EmpleadoCollection.ReplaceOne(m => m.Id == this.Id, this);
+            await EmpleadoCollection.DeleteOneAsync(e => e.Id == this.Id);
         }
 
-        public void Eliminar()
+        public static async Task<Empleado> BuscarAsync(string id)
         {
-            _EmpleadoCollection.DeleteOne(m => m.Id == this.Id);
+            // Permite buscar por string id (se convierte a ObjectId si es válido)
+            ObjectId oid;
+            var filter = ObjectId.TryParse(id, out oid)
+                ? Builders<Empleado>.Filter.Eq(e => e.Id, oid)
+                : Builders<Empleado>.Filter.Eq("cedula", id); // Búsqueda alternativa por cédula
+            return await EmpleadoCollection.Find(filter).FirstOrDefaultAsync();
         }
 
-        public Empleado Buscar(string id)
+        public static async Task<List<Empleado>> ListarAsync()
         {
-            return _EmpleadoCollection.Find(m => m.Id == id).FirstOrDefault();
+            return await EmpleadoCollection.Find(_ => true).ToListAsync();
         }
 
-        public List<Empleado> Listar()
+        public static async Task<Empleado> BuscarPorClaveAsync(string clave, string valor)
         {
-            return _EmpleadoCollection.Find(_ => true).ToList();
+            var filter = Builders<Empleado>.Filter.Eq(clave, valor);
+            return await EmpleadoCollection.Find(filter).FirstOrDefaultAsync();
         }
 
-        public Empleado BuscarPorClave(string clave, string valor)
+        public static async Task<List<Empleado>> ListarPorClaveAsync(string clave, string valor)
         {
-            return _EmpleadoCollection.Find(Builders<Empleado>.Filter.Eq(clave, valor)).FirstOrDefault();
+            var filter = Builders<Empleado>.Filter.Eq(clave, valor);
+            return await EmpleadoCollection.Find(filter).ToListAsync();
         }
 
-        public List<Empleado> ListarPorClave(string clave, string valor)
+        // Si necesitas crear manualmente el ObjectId, usa esto:
+        public static ObjectId GenerarNuevoObjectId()
         {
-            return _EmpleadoCollection.Find(Builders<Empleado>.Filter.Eq(clave, valor)).ToList();
-        }
-
-        public string GenerarNuevoId()
-        {
-            string nuevoId;
-            Random random = new Random();
-            const string caracteres = "0123456789";
-
-            do
-            {
-                char[] idAleatorio = new char[6];
-
-                for (int i = 0; i < 6; i++)
-                {
-                    idAleatorio[i] = caracteres[random.Next(caracteres.Length)];
-                }
-
-                nuevoId = new string(idAleatorio);
-
-            } while (_EmpleadoCollection.Find(m => m.Id == nuevoId).Any());
-
-            return nuevoId;
+            return ObjectId.GenerateNewId();
         }
     }
 }

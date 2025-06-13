@@ -19,12 +19,12 @@ namespace SistemaFerreteriaV8
             this.Close();
         }
 
-        private void ListaDeEnvios_Load(object sender, EventArgs e)
+        private async void ListaDeEnvios_Load(object sender, EventArgs e)
         {
             try
             {
-                // Obtener facturas que deben ser enviadas
-                List<Factura> listaEnvios =  Factura.ListarFacturas("enviar", "true");
+                // Obtener facturas que deben ser enviadas (async)
+                var listaEnvios = await Factura.ListarFacturasAsync("enviar", "true");
 
                 foreach (var item in listaEnvios)
                 {
@@ -36,14 +36,13 @@ namespace SistemaFerreteriaV8
                             item.NombreCliente,
                             item.Total,
                             item.Direccion,
-                            item.Fecha.ToString("dd/MM/yyyy") // Formato de fecha
+                            item.Fecha.ToString("dd/MM/yyyy")
                         );
                     }
                 }
             }
             catch (Exception ex)
             {
-                // Manejar errores y notificar al usuario
                 MessageBox.Show(
                     $"Ocurrió un error al cargar la lista de envíos: {ex.Message}",
                     "Error",
@@ -53,16 +52,8 @@ namespace SistemaFerreteriaV8
             }
         }
 
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void button3_Click(object sender, EventArgs e)
-        {
-
-        }
+        private void button2_Click(object sender, EventArgs e) { /* Implementar si se requiere */ }
+        private void button3_Click(object sender, EventArgs e) { /* Implementar si se requiere */ }
 
         private async void button4_Click(object sender, EventArgs e)
         {
@@ -70,21 +61,16 @@ namespace SistemaFerreteriaV8
             {
                 try
                 {
-                    // Obtener el ID seleccionado en la fila actual
                     var idValue = ListaEnvios.CurrentRow.Cells[0].Value.ToString();
-                    int id = int.TryParse(idValue, out var parsedId) ? parsedId : 0;
+                    // Si tu ID es string/cadena cambia esta línea, si es int, déjala igual.
+                    var factura = await Factura.BuscarAsync(int.Parse(idValue));
 
-                    // Verificar si el ID es válido
-                    if (id == 0)
+                    if (factura == null)
                     {
-                        MessageBox.Show("ID de factura no válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("Factura no encontrada.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
 
-                    // Buscar la factura de manera asincrónica
-                    Factura factura =  Factura.Buscar(id);
-
-                    // Confirmar entrega
                     var dialogResult = MessageBox.Show(
                         "Estás registrando la entrega de esta factura. ¿Es correcto?",
                         "Aviso",
@@ -94,9 +80,8 @@ namespace SistemaFerreteriaV8
 
                     if (dialogResult == DialogResult.Yes)
                     {
-                        // Actualizar el estado de la factura
                         factura.Estado = "Entregada";
-                         factura.ActualizarFactura();
+                        await factura.ActualizarFacturaAsync();
 
                         MessageBox.Show(
                             "La factura fue registrada como entregada a su destino.",
@@ -104,6 +89,15 @@ namespace SistemaFerreteriaV8
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Asterisk
                         );
+
+                        // Actualizar VentanaVentas si está abierta
+                        var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+                        if (frm != null)
+                        {
+                            await frm.CargarFacturaAsync(factura);
+                        }
+
+                        this.Dispose();
                     }
                     else
                     {
@@ -114,20 +108,9 @@ namespace SistemaFerreteriaV8
                             MessageBoxIcon.Exclamation
                         );
                     }
-
-                    // Actualizar VentanaVentas si está abierta
-                    if (Application.OpenForms.OfType<VentanaVentas>().Any())
-                    {
-                        var frm = (VentanaVentas)Application.OpenForms["VentanaVentas"];
-                        frm.CargarFactura(factura);
-                    }
-
-                    // Cerrar la ventana actual
-                    this.Dispose();
                 }
                 catch (Exception ex)
                 {
-                    // Manejar cualquier error y mostrar un mensaje
                     MessageBox.Show(
                         $"Ocurrió un error al procesar la factura: {ex.Message}",
                         "Error",
@@ -142,19 +125,22 @@ namespace SistemaFerreteriaV8
             }
         }
 
-
-        private void ListaEnvios_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        private async void ListaEnvios_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-           /* var id = ListaEnvios[0, e.RowIndex].Value;
-
-            id = id != null ? int.Parse(id.ToString()) : 0;
-            Factura factura= new Factura().Buscar(int.Parse(id.ToString()));
-            VentanaVentas frm = (VentanaVentas)Application.OpenForms["VentanaVentas"];
-            if (Application.OpenForms.OfType<VentanaVentas>().Any())
+            // Ejemplo de abrir factura al hacer click en celda (descomentar y adaptar si deseas esta función)
+            /*
+            var id = ListaEnvios[0, e.RowIndex].Value?.ToString();
+            if (!string.IsNullOrWhiteSpace(id))
             {
-                frm.CargarFactura(factura);
+                var factura = await Factura.BuscarAsync(id);
+                var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+                if (frm != null)
+                {
+                    await frm.CargarFacturaAsync(factura);
+                }
+                this.Dispose();
             }
-            this.Dispose();*/
+            */
         }
 
         private void button5_Click(object sender, EventArgs e)

@@ -2,11 +2,7 @@
 using SistemaFerreteriaV8.Clases;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -15,17 +11,18 @@ namespace SistemaFerreteriaV8
     public partial class VentanaFacturasPorCobrar : Form
     {
         Factura Factura = null;
+
         public VentanaFacturasPorCobrar()
         {
             InitializeComponent();
         }
 
-        private  void VentanaFacturasPorCobrar_Load(object sender, EventArgs e)
+        private async void VentanaFacturasPorCobrar_Load(object sender, EventArgs e)
         {
             try
             {
-                // Obtener las facturas no pagadas (con paginación)
-                List<Factura> facturas =  Factura.ListarUltimasFacturas();
+                // Obtener las facturas no pagadas (con paginación) - Async!
+                List<Factura> facturas = await  Factura.ListarUltimasFacturasAsync();
 
                 if (facturas == null || facturas.Count == 0)
                 {
@@ -39,52 +36,44 @@ namespace SistemaFerreteriaV8
                     ListaFacturas.Rows.Add(
                         factura.Id,
                         factura.NombreCliente,
-                        factura.Fecha.ToString("dd/MM/yyyy"), // Formato de fecha
-                        factura.Total.ToString("C2") // Formato de moneda
+                        factura.Fecha.ToString("dd/MM/yyyy"),
+                        factura.Total.ToString("C2")
                     );
                 }
             }
             catch (Exception ex)
             {
-                // Manejo de errores
                 MessageBox.Show($"Ocurrió un error al cargar las facturas: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
+        private void ListaFacturas_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
 
-        private  void ListaFacturas_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-          
-        }
-
-
-        private  void button3_Click(object sender, EventArgs e)
+        private async void button3_Click(object sender, EventArgs e)
         {
             try
             {
-                int id = 0;
+                var input = Interaction.InputBox("Favor digitar la factura que desea buscar para editar");
+                if (string.IsNullOrWhiteSpace(input)) return;
+                if (!int.TryParse(input, out int id)) return;
 
-                id = id != null ? int.Parse(Interaction.InputBox("Favor digitar la factura que desea buscar para editar")) : 0;
-                Factura = Factura.Buscar(int.Parse(id.ToString()));
+                Factura = await Factura.BuscarAsync(id);
 
-                VentanaVentas frm = (VentanaVentas)Application.OpenForms["VentanaVentas"];
-                if (Application.OpenForms.OfType<VentanaVentas>().Any())
+                var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+                if (frm != null)
                 {
-                    frm.CargarFactura(this.Factura);
+                    await frm.CargarFacturaAsync(Factura);
                     frm.esCargada = true;
                 }
                 this.Dispose();
-
             }
-            catch (Exception)
+            catch
             {
-
-                MessageBox.Show("Favor revisar el codigo de la factura");
+                MessageBox.Show("Favor revisar el código de la factura");
             }
-            
         }
 
-        private  void button1_Click(object sender, EventArgs e)
+        private async void button1_Click(object sender, EventArgs e)
         {
             if (ListaFacturas?.CurrentRow == null)
             {
@@ -93,14 +82,15 @@ namespace SistemaFerreteriaV8
             }
 
             var idValue = ListaFacturas[0, ListaFacturas.CurrentRow.Index].Value;
-            int id = idValue != null ? int.Parse(idValue.ToString()) : 0;
+            if (idValue == null) return;
+            if (!int.TryParse(idValue.ToString(), out int id)) return;
 
-            Factura = Factura.Buscar(id);
+            Factura = await Factura.BuscarAsync(id);
 
             var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
             if (frm != null)
             {
-                frm.CargarFactura(Factura);
+                await frm.CargarFacturaAsync(Factura);
                 frm.esCargada = true;
             }
 
@@ -112,11 +102,10 @@ namespace SistemaFerreteriaV8
             this.Dispose();
         }
 
-        private void ListaFacturas_CellContentDoubleClick(object sender, DataGridViewCellEventArgs e)
+        private async void ListaFacturas_CellContentDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             try
             {
-                // Validar índice y valor de la celda
                 if (e.RowIndex < 0 || ListaFacturas[0, e.RowIndex]?.Value == null ||
                     string.IsNullOrWhiteSpace(ListaFacturas[0, e.RowIndex].Value.ToString()))
                 {
@@ -124,22 +113,18 @@ namespace SistemaFerreteriaV8
                     return;
                 }
 
-                // Obtener el ID de la factura
                 int id = int.Parse(ListaFacturas[0, e.RowIndex].Value.ToString());
-
-                // Buscar la factura de manera asincrónica
-                Factura factura = Factura.Buscar(id);
+                Factura factura = await Factura.BuscarAsync(id);
                 if (factura == null)
                 {
                     MessageBox.Show("La factura no fue encontrada.", "Información", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
-                // Verificar si la ventana VentanaVentas está abierta
                 var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
                 if (frm != null)
                 {
-                    frm.CargarFactura(factura);
+                    await frm.CargarFacturaAsync(factura);
                     frm.esCargada = true;
                 }
                 else
@@ -147,46 +132,42 @@ namespace SistemaFerreteriaV8
                     MessageBox.Show("La ventana VentanaVentas no está abierta.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-                // Cerrar la ventana actual
                 this.Dispose();
             }
             catch (Exception ex)
             {
-                // Manejo de errores
                 MessageBox.Show($"Ocurrió un error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
         }
 
-        private void button4_Click(object sender, EventArgs e)
+        private async void button4_Click(object sender, EventArgs e)
         {
-            if (ListaFacturas.CurrentRow.Cells[0] != null)
+            if (ListaFacturas.CurrentRow?.Cells[0] != null)
             {
-                string id = ListaFacturas.CurrentRow.Cells[0].Value.ToString();
-                if (!string.IsNullOrEmpty(id))
+                string idStr = ListaFacturas.CurrentRow.Cells[0].Value.ToString();
+                if (!string.IsNullOrEmpty(idStr) && int.TryParse(idStr, out int id))
                 {
-                    Factura factura = Factura.Buscar(int.Parse(id));
+                    Factura factura = await Factura.BuscarAsync(id);
                     if (factura != null)
                     {
-                        if (factura.tipoFactura == "Comprobante Gubernamental")
+                        switch (factura.TipoFactura)
                         {
-                            factura.GenerarFacturaGubernamental();
-                        }
-                        else if (factura.tipoFactura == "Comprobante Fiscal")
-                        {
-                            factura.GenerarFacturaComprobante();
-                        }
-                        else if (factura.tipoFactura == "Consumo")
-                        {
-                            factura.GenerarFactura();
-                        }
-                        else
-                        {
-                            factura.GenerarFactura1();
+                            case "Comprobante Gubernamental":
+                                factura.GenerarFacturaGubernamental();
+                                break;
+                            case "Comprobante Fiscal":
+                                factura.GenerarFacturaComprobante();
+                                break;
+                            case "Consumo":
+                                factura.GenerarFacturaAsync();
+                                break;
+                            default:
+                                factura.GenerarFactura1();
+                                break;
                         }
                     }
                 }
-            }  
+            }
         }
     }
 }

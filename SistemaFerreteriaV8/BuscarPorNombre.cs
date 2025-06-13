@@ -92,7 +92,7 @@ namespace SistemaFerreteriaV8
                         {
                             // Operaciones en segundo plano
                             ReferenciaVentanaVentas.codigoProducto = codigo;
-                            ReferenciaVentanaVentas.DetectaProducto();
+                            ReferenciaVentanaVentas.DetectaProductoAsync();
                             ReferenciaVentanaVentas.AsignarTotales();
                         }).ContinueWith(task =>
                         {

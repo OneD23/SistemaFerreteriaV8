@@ -1,4 +1,5 @@
-﻿using SistemaFerreteriaV8.Clases;
+﻿using MongoDB.Bson;
+using SistemaFerreteriaV8.Clases;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -24,7 +25,7 @@ namespace SistemaFerreteriaV8
 
             Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Codigo.Enabled = Puesto.Enabled = Telefono.Enabled = true;
             Empleado nuevoCliente = new Empleado();
-            Id.Text = nuevoCliente.GenerarNuevoId();
+            Id.Text = nuevoCliente.Id.ToString();
         }
 
         private void Editar_Click(object sender, EventArgs e)
@@ -34,12 +35,12 @@ namespace SistemaFerreteriaV8
             Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Codigo.Enabled= Puesto.Enabled = Telefono.Enabled = true;
         }
 
-        private void Guardar_Click(object sender, EventArgs e)
+        private async void Guardar_Click(object sender, EventArgs e)
         {
 
             Empleado nuevoEmpleado = new Empleado();
 
-            nuevoEmpleado.Id = Id.Text;
+            nuevoEmpleado.Id = ObjectId.Parse(Id.Text);
             nuevoEmpleado.Nombre = Nombre.Text;
             nuevoEmpleado.Direccion = Direccion.Text;
             nuevoEmpleado.Cedula = Cedula.Text;
@@ -49,28 +50,28 @@ namespace SistemaFerreteriaV8
 
             
 
-            if (nuevoEmpleado.Buscar(Id.Text) == null)
+            if (await Empleado.BuscarAsync(Id.Text) == null)
             {
                 MessageBox.Show("El usuario se ha creado corrextamente!!!");
-                nuevoEmpleado.Crear();
+                nuevoEmpleado.CrearAsync();
             }
             else
             {
                 MessageBox.Show("El usuario se ha Actualizado corrextamente!!!");
-                nuevoEmpleado.Editar();
+                await nuevoEmpleado.EditarAsync();
             }
 
             EmpleadoActivo = nuevoEmpleado;
         }
 
-        private void BuscarTodo_Click(object sender, EventArgs e)
+        private  async void BuscarTodo_Click(object sender, EventArgs e)
         {
 
             if (!String.IsNullOrWhiteSpace(Id.Text))
             {
-                Empleado nuevoCliente = new Empleado().Buscar(Id.Text);
+                Empleado nuevoCliente = await Empleado.BuscarAsync(Id.Text);
 
-                Id.Text = nuevoCliente.Id;
+                Id.Text = nuevoCliente.Id.ToString();
                 Nombre.Text = nuevoCliente.Nombre;
                 Direccion.Text = nuevoCliente.Direccion;
                 Cedula.Text = nuevoCliente.Cedula;
@@ -88,7 +89,7 @@ namespace SistemaFerreteriaV8
         {
             if(MessageBox.Show("Estas seguro que quieres eliminar el empleado llamado: " + EmpleadoActivo.Nombre, "Aviso!", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                EmpleadoActivo.Eliminar();
+                EmpleadoActivo.EliminarAsync();
                 Id.Text = Nombre.Text = Cedula.Text = Direccion.Text = Puesto.Text = Codigo.Text = Telefono.Text = " ";
             }
         }
@@ -99,11 +100,11 @@ namespace SistemaFerreteriaV8
 
         }
 
-        private void VentanaEmpleado_Load(object sender, EventArgs e)
+        private async void VentanaEmpleado_Load(object sender, EventArgs e)
         {
 
             ListaDeEmpleado.DefaultCellStyle.ForeColor = Color.Black;
-            List<Empleado> clientes = new Empleado().Listar();
+            List<Empleado> clientes =  await Empleado.ListarAsync();
 
             foreach (Empleado cliente in clientes)
             {
@@ -129,7 +130,7 @@ namespace SistemaFerreteriaV8
                 string id = ListaDeEmpleado[0, e.RowIndex].Value.ToString();
 
                 // Buscar empleado de manera asincrónica
-                Empleado nuevoEmpleado =  new Empleado().Buscar(id);
+                Empleado nuevoEmpleado = await  Empleado.BuscarAsync(id);
 
                 if (nuevoEmpleado == null)
                 {
@@ -138,7 +139,7 @@ namespace SistemaFerreteriaV8
                 }
 
                 // Mostrar la información del empleado
-                Id.Text = nuevoEmpleado.Id;
+                Id.Text = nuevoEmpleado.Id.ToString();
                 Nombre.Text = nuevoEmpleado.Nombre;
                 Direccion.Text = nuevoEmpleado.Direccion;
                 Cedula.Text = nuevoEmpleado.Cedula;
@@ -152,7 +153,7 @@ namespace SistemaFerreteriaV8
                 EmpleadoActivo = nuevoEmpleado;
 
                 // Obtener las facturas asociadas al empleado
-                List<Factura> facturas =  Factura.ListarFacturas("IdEmpleado", nuevoEmpleado.Id);
+                List<Factura> facturas =  await Factura.ListarFacturasAsync("IdEmpleado", nuevoEmpleado.Id.ToString());
 
                 // Mostrar facturas en la lista
                 ListaDeCompras.Rows.Clear();

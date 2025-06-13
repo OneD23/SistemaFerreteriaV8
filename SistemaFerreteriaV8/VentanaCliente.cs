@@ -22,12 +22,12 @@ namespace SistemaFerreteriaV8
             InitializeComponent();
         }
 
-        private void VentanaCliente_Load(object sender, EventArgs e)
+        private async void VentanaCliente_Load(object sender, EventArgs e)
         {// Asignar el color de texto de una vez para toda la lista
             ListaDeClientes.DefaultCellStyle.ForeColor = Color.Black;
 
             // Obtener la lista de clientes de manera eficiente
-            List<Cliente> clientes = new Cliente().Listar();
+            List<Cliente> clientes = await new Cliente().ListarAsync();
 
             // Crear una lista para almacenar las filas a agregar
             List<DataGridViewRow> filas = new List<DataGridViewRow>();
@@ -47,12 +47,12 @@ namespace SistemaFerreteriaV8
 
         }
 
-        private void Nuevo_Click(object sender, EventArgs e)
+        private async void Nuevo_Click(object sender, EventArgs e)
         {
             Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Correo.Enabled = Telefono.Enabled = LimiteCredito.Enabled = true;
             Id.Text = Nombre.Text = Cedula.Text = Direccion.Text = Correo.Text = Telefono.Text = LimiteCredito.Text ="";
             Cliente nuevoCliente = new Cliente();
-            Id.Text = nuevoCliente.GenerarNuevoId();
+            Id.Text = await nuevoCliente.GenerarNuevoIdAsync();
         }
 
         private void Guardar_Click(object sender, EventArgs e)
@@ -67,14 +67,14 @@ namespace SistemaFerreteriaV8
             nuevoCliente.Correo = Correo.Text;
             nuevoCliente.LimiteCredito = double.Parse(LimiteCredito.Text);
 
-            if (new Cliente().Buscar(Id.Text) == null)
+            if (new Cliente().BuscarAsync(Id.Text) == null)
             {
-                nuevoCliente.Crear();
+                nuevoCliente.CrearAsync();
                 MessageBox.Show("Cliente creado correctamente!");
             }
             else
             {
-                nuevoCliente.Editar();
+                nuevoCliente.EditarAsync();
                 MessageBox.Show("Cliente actualizado correctamente!");
             }
 
@@ -84,23 +84,23 @@ namespace SistemaFerreteriaV8
             Id.Text = Nombre.Text = Cedula.Text = Direccion.Text = Correo.Text = Telefono.Text = LimiteCredito.Text= "";
         }
 
-        private void button3_Click(object sender, EventArgs e)
+        private async void button3_Click(object sender, EventArgs e)
         {
             if (ClienteActivo != null)
             {
                 if (DialogResult.Yes == MessageBox.Show($"Esta seguro que desea eliminar a {ClienteActivo.Nombre} de su lista de cuenta","Aviso",MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation))
                 {
-                    ClienteActivo.Eliminar();
+                    await ClienteActivo.EliminarAsync();
                 }
             }           
         }
 
-        private void BuscarTodo_Click(object sender, EventArgs e)
+        private async void BuscarTodo_Click(object sender, EventArgs e)
         {
             string idTemporal = Interaction.InputBox("Ingrese el Id: ", "Buscar por Id");
             if (!String.IsNullOrWhiteSpace(idTemporal))
             {
-                Cliente nuevoCliente = new Cliente().Buscar(idTemporal);
+                Cliente nuevoCliente = await new Cliente().BuscarAsync(idTemporal);
 
                 double creditoActivo = 0;
                 foreach (var item in nuevoCliente.CreditosActivo)
@@ -131,14 +131,14 @@ namespace SistemaFerreteriaV8
             Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Correo.Enabled = Telefono.Enabled = LimiteCredito.Enabled = false;
         }
 
-        private void ListaDeClientes_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        private async void ListaDeClientes_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             string id = ListaDeClientes[0, e.RowIndex].Value.ToString();
             string nombre = "";
 
             if (!String.IsNullOrWhiteSpace(id))
             {
-                Cliente nuevoCliente = new Cliente().Buscar(id);
+                Cliente nuevoCliente =await new Cliente().BuscarAsync(id);
 
                 double creditoActivo = 0;
                 if (nuevoCliente.CreditosActivo != null)

@@ -1,13 +1,6 @@
 ﻿using Microsoft.VisualBasic;
 using SistemaFerreteriaV8.Clases;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SistemaFerreteriaV8
@@ -16,6 +9,7 @@ namespace SistemaFerreteriaV8
     {
         public DataGridView dataGridView { set; get; }
         public Productos ProductoSeleccionado { get; set; }
+
         public VentanaPrecio()
         {
             InitializeComponent();
@@ -26,76 +20,74 @@ namespace SistemaFerreteriaV8
             if (ProductoSeleccionado != null)
             {
                 NombreProducto.Text = ProductoSeleccionado.Nombre;
-                ListaPrecio.Rows.Add(ProductoSeleccionado.Precio[0], ProductoSeleccionado.Precio[1], ProductoSeleccionado.Precio[2], ProductoSeleccionado.Precio[3]);
+                ListaPrecio.Rows.Add(
+                    ProductoSeleccionado.Precio[0],
+                    ProductoSeleccionado.Precio[1],
+                    ProductoSeleccionado.Precio[2],
+                    ProductoSeleccionado.Precio[3]
+                );
             }
-
         }
 
-        private void ListaPrecio_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        // Mejor práctica: Siempre async para autenticación
+        private async void ListaPrecio_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
+            // Si se selecciona la columna especial (administrador)
             if (e.ColumnIndex == 3)
             {
-                Empleado empleado = new Empleado().BuscarPorClave("contrasena", Interaction.InputBox("Necesita la clave de un administrador para continuar"));
+                var clave = Interaction.InputBox("Necesita la clave de un administrador para continuar");
+                var empleado = await Empleado.BuscarPorClaveAsync("contrasena", clave);
+
                 if (empleado != null && empleado.Puesto == "Administrador")
                 {
-                    VentanaVentas frm = (VentanaVentas)Application.OpenForms["VentanaVentas"];
-                    if (Application.OpenForms.OfType<Form1>().Any())
-                    {
-                        frm.CambiarPrecio(frm.obtenerValorDeCelda(ListaPrecio.Rows[e.RowIndex].Cells[e.ColumnIndex]));
-                    }
-                    this.Dispose();
+                    CambiarPrecioSeleccionado(e.RowIndex, e.ColumnIndex);
                 }
                 else
                 {
-                    MessageBox.Show("Usuario invalido");
+                    MessageBox.Show("Usuario inválido");
                 }
             }
             else
             {
-                VentanaVentas frm = (VentanaVentas)Application.OpenForms["VentanaVentas"];
-                if (Application.OpenForms.OfType<Form1>().Any())
-                {
-                    frm.CambiarPrecio(frm.obtenerValorDeCelda(ListaPrecio.Rows[e.RowIndex].Cells[e.ColumnIndex]));
-                }
-                this.Dispose();
+                CambiarPrecioSeleccionado(e.RowIndex, e.ColumnIndex);
             }
-          
         }
 
-        private void ListaPrecio_CellClick(object sender, DataGridViewCellEventArgs e)
+        // Método para cambiar el precio de manera segura
+        private void CambiarPrecioSeleccionado(int rowIndex, int columnIndex)
         {
-          
-        }
-
-        private void Aceptar_Click(object sender, EventArgs e)
-        {
-            if (ListaPrecio.CurrentCell.ColumnIndex == 3)
+            var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+            if (frm != null)
             {
-                Empleado empleado = new Empleado().BuscarPorClave("contrasena",Interaction.InputBox("Necesita la clave de un administrador para continuar"));
+                string valorCelda = frm.obtenerValorDeCelda(ListaPrecio.Rows[rowIndex].Cells[columnIndex]);
+                frm.CambiarPrecio(valorCelda);
+            }
+            this.Dispose();
+        }
+
+        // Botón aceptar hace lo mismo que el click directo en la celda (respetando seguridad)
+        private async void Aceptar_Click(object sender, EventArgs e)
+        {
+            int col = ListaPrecio.CurrentCell.ColumnIndex;
+            int row = ListaPrecio.CurrentCell.RowIndex;
+            if (col == 3)
+            {
+                var clave = Interaction.InputBox("Necesita la clave de un administrador para continuar");
+                var empleado = await Empleado.BuscarPorClaveAsync("contrasena", clave);
+
                 if (empleado != null && empleado.Puesto == "Administrador")
                 {
-                    VentanaVentas frm = (VentanaVentas)Application.OpenForms["VentanaVentas"];
-                    if (Application.OpenForms.OfType<Form1>().Any())
-                    {
-                        frm.CambiarPrecio(frm.obtenerValorDeCelda(ListaPrecio.Rows[ListaPrecio.CurrentCell.RowIndex].Cells[ListaPrecio.CurrentCell.ColumnIndex]));
-                    }
-                    this.Dispose();
+                    CambiarPrecioSeleccionado(row, col);
                 }
                 else
                 {
-                    MessageBox.Show("Usuario invalido");
+                    MessageBox.Show("Usuario inválido");
                 }
             }
             else
             {
-                VentanaVentas frm = (VentanaVentas)Application.OpenForms["VentanaVentas"];
-                if (Application.OpenForms.OfType<Form1>().Any())
-                {
-                    frm.CambiarPrecio(frm.obtenerValorDeCelda(ListaPrecio.Rows[ListaPrecio.CurrentCell.RowIndex].Cells[ListaPrecio.CurrentCell.ColumnIndex]));
-                }
-                this.Dispose();
+                CambiarPrecioSeleccionado(row, col);
             }
         }
-
     }
 }

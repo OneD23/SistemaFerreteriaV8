@@ -1,31 +1,31 @@
-﻿using System;
+﻿using Microsoft.VisualBasic;
+using SistemaFerreteriaV8.Clases;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.VisualBasic;
-using SistemaFerreteriaV8.Clases;
-using System.IO;
 using static Org.BouncyCastle.Math.EC.ECCurve;
-using System.Drawing.Printing;
 
 namespace SistemaFerreteriaV8
 {
     public partial class VentanaPagar : Form
     {
-        public Factura facturaActiva { set; get; }
-        public Empleado EmpleadoActivo { set; get; }
-        public Cliente ClienteActivo { set; get; }
-
+        public Factura facturaActiva { get; set; }
+        public Empleado EmpleadoActivo { get; set; }
+        public Cliente ClienteActivo { get; set; }
         public string metodoAntes { get; set; }
+
         public VentanaPagar()
         {
             InitializeComponent();
         }
+
         private void VentanaPagar_Load(object sender, EventArgs e)
         {
             if (facturaActiva != null)
@@ -33,192 +33,175 @@ namespace SistemaFerreteriaV8
                 metodoAntes = facturaActiva.MetodoDePago;
                 Configuraciones config = new Configuraciones().ObtenerPorId(1);
                 Imprimir.Checked = true;
-                TipoFactura.Text = facturaActiva.tipoFactura;
+                TipoFactura.Text = facturaActiva.TipoFactura;
                 subTotal.Text = facturaActiva.Total.ToString("c2");
                 Descuento.Text = facturaActiva.Descuentos.ToString("c2");
-
                 Total.Text = (facturaActiva.Total - facturaActiva.Descuentos).ToString("c2");
-                MetodoPago.SelectedIndex = 0;                
+                MetodoPago.SelectedIndex = 0;
             }
         }
+
         private void MetodoPago_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if(MetodoPago.SelectedIndex != 0) {
-            Efectivo.Enabled = false;
-            }
-            else
-            {
-                Efectivo.Enabled = true;
-            }
+            Efectivo.Enabled = MetodoPago.SelectedIndex == 0;
         }
 
         private void Efectivo_KeyPress(object sender, KeyPressEventArgs e)
         {
-            if (e.KeyChar == (char) Keys.Enter)
+            if (e.KeyChar == (char)Keys.Enter)
             {
-                double total = facturaActiva.Total - facturaActiva.Descuentos;
-
-                double efectivo = double.Parse(Efectivo.Text);
-
-                Devuelta.Text = (efectivo - total).ToString("c2");
+                if (double.TryParse(Efectivo.Text, out double efectivo))
+                {
+                    double total = facturaActiva.Total - facturaActiva.Descuentos;
+                    Devuelta.Text = (efectivo - total).ToString("c2");
+                }
+                else
+                {
+                    MessageBox.Show("Monto de efectivo no válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
-        private void Pagar_Click(object sender, EventArgs e)
+
+        private async void Pagar_Click(object sender, EventArgs e)
         {
-            bool sentinela = true;
-            if (facturaActiva != null && !facturaActiva.Eliminada)
-            {                
-                facturaActiva.tipoFactura = TipoFactura.Text;
-                    
-                //configuracion de pagos
-                facturaActiva.MetodoDePago = MetodoPago.Text;
+            Configuraciones confi = new Configuraciones().ObtenerPorId(1);
+            if (confi != null)
+            {
+                await RealizarPagoAsync();
+            }
+            else MessageBox.Show("Todavia este Sistema no se ha configurado para empezar a trabajar! Dirijase a configuraciones para configurar correctamente", "ATENCION", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
 
-                switch (MetodoPago.Text)
-                {
-                    case "Efectivo":
-                        facturaActiva.Paga = true;
-                        facturaActiva.MetodoDePago = "Efectivo";
-                        facturaActiva.Fecha = DateTime.UtcNow;
-                        if (!string.IsNullOrEmpty(Efectivo.Text))
-                        {
-                            facturaActiva.Efectivo = double.Parse(Efectivo.Text);
-                        }
-                       
-                        sentinela = true;
+        private async Task RealizarPagoAsync()
+        {
+            bool pagoProcesado = false;
+            if (facturaActiva == null || facturaActiva.Eliminada)
+                return;
 
-                        if (ClienteActivo != null &&ClienteActivo.CreditosActivo.Exists(m => m.Id == facturaActiva.Id))
-                        {
-                            ClienteActivo.CreditosActivo.RemoveAll(m => m.Id == facturaActiva.Id);                            
-                            ClienteActivo.Editar();
-                        }
-                        facturaActiva.ActualizarFactura();
+            facturaActiva.TipoFactura = TipoFactura.Text;
+            facturaActiva.MetodoDePago = MetodoPago.Text;
 
-                        break;
+            switch (MetodoPago.Text)
+            {
+                case "Efectivo":
+                    facturaActiva.Paga = true;
+                    facturaActiva.MetodoDePago = "Efectivo";
+                    facturaActiva.Fecha = DateTime.UtcNow;
 
-                    case "Credito":
-
-                        facturaActiva.Paga = false;
-
-                        Cliente cliente = new Cliente();
-                        if (facturaActiva.IdCliente != null && facturaActiva.IdCliente != "0")
-                        {
-                            cliente = new Cliente().Buscar(facturaActiva.IdCliente);
-                        }
-                        else
-                        {
-                            string input = Interaction.InputBox("Digite el Nombre o Id del cliente al cual le cargara el credito: ");
-
-                            bool esNumero = int.TryParse(input, out _);
-
-                            //buscar por nombre si es el caso
-                            if (esNumero)
-                            {
-                                cliente = new Cliente().Buscar(input);
-                            }
-                            else
-                            {
-                                cliente = new Cliente().BuscarPorClave("nombre", input);
-                            }         
-                        }
-                        if (cliente != null)
-                        {                       
-
-                            if (MessageBox.Show($"Esta seguro que quiere cargar el monto de {facturaActiva.Total} a la cuenta de: \n\n" +
-                                  $"Id: {cliente.Id}. \n" +
-                                  $"Nombre: {cliente.Nombre}. \n" +
-                                  $"Direccion: {cliente.Direccion}. \n", "Informacion", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                            {
-                                //Iniciar el proceso de pago
-                                double creditoActivo = 0;
-                                if (cliente.CreditosActivo != null)
-                                {
-                                    foreach (var item in cliente.CreditosActivo)
-                                    {
-                                        creditoActivo += item.Total;
-                                    }
-                                }
-                                else
-                                {
-                                    cliente.CreditosActivo = new List<Factura>();
-                                }
-                               
-                                if(creditoActivo < cliente.LimiteCredito)
-                                {
-                                  if (creditoActivo + facturaActiva.Total > cliente.LimiteCredito)
-                                    {
-                                        MessageBox.Show($"El cliente tiene un credito activo de {creditoActivo} si le sumas los { facturaActiva.Total} de la factura superara el monto de credito permitido que es {cliente.LimiteCredito}", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                    }
-                                    else
-                                    {
-                                        //Estaras aqui si pasas todas las validaciones                                       
-                                        cliente.CreditosActivo.Add( facturaActiva);
-                                        cliente.Editar();
-
-                                        facturaActiva.Paga = false;
-                                        facturaActiva.ActualizarFactura();
-                                        sentinela = true;
-                                    }
-                                }
-                                else
-                                {
-                                    MessageBox.Show("Este Cliente ya supero el credito permitido", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                }
-                            }
-                            else
-                            {
-                                MessageBox.Show("Se cancelo el proceso de pago", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                           
-                        }
-                        else
-                        {
-                            MessageBox.Show("No se pudo encontrar el cliente, revise los datos ingresados e intente de nuevo", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            sentinela = false;
-                        }
-
-                        break;
-
-                    default:
-                        break;
-                }
-                if (sentinela)
-                {
-                    //terminando el pago y cerrando la ventana
-                    if (facturaActiva.tipoFactura == "Consumo")
+                    if (!string.IsNullOrEmpty(Efectivo.Text) && double.TryParse(Efectivo.Text, out double montoEfectivo))
                     {
-                        facturaActiva.GenerarFactura();
+                        facturaActiva.Efectivo = montoEfectivo;
                     }
-                    else if (facturaActiva.tipoFactura == "Comprobante Fiscal")
+
+                    if (ClienteActivo != null && ClienteActivo.CreditosActivo != null && ClienteActivo.CreditosActivo.Exists(m => m.Id == facturaActiva.Id))
                     {
-                        facturaActiva.GenerarFacturaComprobante();
+                        ClienteActivo.CreditosActivo.RemoveAll(m => m.Id == facturaActiva.Id);
+                        await ClienteActivo.EditarAsync();
                     }
-                    else if (facturaActiva.tipoFactura == "Comprobante Gubernamental")
+                    await facturaActiva.ActualizarFacturaAsync();
+                    pagoProcesado = true;
+                    break;
+
+                case "Credito":
+                    facturaActiva.Paga = false;
+                    Cliente cliente = null;
+
+                    if (!string.IsNullOrEmpty(facturaActiva.IdCliente) && facturaActiva.IdCliente != "0")
                     {
-                        facturaActiva.GenerarFacturaGubernamental();
+                        cliente = await new Cliente().BuscarAsync(facturaActiva.IdCliente);
                     }
                     else
                     {
-                        facturaActiva.GenerarFactura1();
+                        string input = Interaction.InputBox("Digite el Nombre o Id del cliente al cual le cargará el crédito:");
+                        if (string.IsNullOrWhiteSpace(input))
+                        {
+                            MessageBox.Show("Entrada vacía. Proceso cancelado.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
 
+                        cliente = int.TryParse(input, out _) ?
+                            await new Cliente().BuscarAsync(input) :
+                            await new Cliente().BuscarPorClaveAsync("nombre", input);
                     }
-                    facturaActiva.RegistrarProductos(1);
-                    VentanaVentas frm = (VentanaVentas)Application.OpenForms["VentanaVentas"];
-                    if (Application.OpenForms.OfType<VentanaVentas>().Any())
+
+                    if (cliente != null)
                     {
-                        frm.LimpiarTodo();
+                        if (MessageBox.Show($"¿Está seguro que quiere cargar el monto de {facturaActiva.Total:C2} a la cuenta de:\n\n" +
+                            $"Id: {cliente.Id}\n" +
+                            $"Nombre: {cliente.Nombre}\n" +
+                            $"Dirección: {cliente.Direccion}\n",
+                            "Información", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                        {
+                            double creditoActivo = cliente.CreditosActivo?.Sum(f => f.Total) ?? 0;
+
+                            if (creditoActivo + facturaActiva.Total > cliente.LimiteCredito)
+                            {
+                                MessageBox.Show(
+                                    $"El cliente tiene un crédito activo de {creditoActivo:C2}. " +
+                                    $"Si le suma los {facturaActiva.Total:C2} de la factura, superará el crédito permitido: {cliente.LimiteCredito:C2}",
+                                    "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            else
+                            {
+                                if (cliente.CreditosActivo == null)
+                                    cliente.CreditosActivo = new List<Factura>();
+
+                                cliente.CreditosActivo.Add(facturaActiva);
+                                await cliente.EditarAsync();
+
+                                facturaActiva.Paga = false;
+                                await facturaActiva.ActualizarFacturaAsync();
+                                pagoProcesado = true;
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("Se canceló el proceso de pago", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
                     }
-                    this.Dispose();
+                    else
+                    {
+                        MessageBox.Show("No se pudo encontrar el cliente. Revise los datos ingresados e intente de nuevo.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    break;
+
+                default:
+                    MessageBox.Show("Seleccione un método de pago válido.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    break;
+            }
+
+            if (pagoProcesado)
+            {
+                // Impresión y cierre de ventana
+                switch (facturaActiva.TipoFactura)
+                {
+                    case "Consumo":
+                        facturaActiva.GenerarFacturaAsync();
+                        break;
+                    case "Comprobante Fiscal":
+                        facturaActiva.GenerarFacturaComprobante();
+                        break;
+                    case "Comprobante Gubernamental":
+                        facturaActiva.GenerarFacturaGubernamental();
+                        break;
+                    default:
+                        facturaActiva.GenerarFactura1();
+                        break;
                 }
+                facturaActiva.RegistrarProductosAsync(1);
+
+                var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+                frm?.LimpiarTodo();
+
+                this.Dispose();
             }
         }
 
-      
         private void MostrarMensaje(string mensaje, string titulo, MessageBoxIcon icono)
         {
             MessageBox.Show(mensaje, titulo, MessageBoxButtons.OK, icono);
         }
 
-            
         private void Limpiar_Click(object sender, EventArgs e)
         {
             Efectivo.Text = Descuento.Text = "";
@@ -233,19 +216,12 @@ namespace SistemaFerreteriaV8
         {
             if (rnc.Length > 8)
             {
-
-
-                string rutaArchivo = @"rnc.txt"; // Cambia esto por la ruta de tu archivo
-                string textoABuscar = "texto buscado"; // Cambia esto por el texto que quieres buscar
+                string rutaArchivo = @"rnc.txt";
                 string[] datos = new string[2];
 
-                // Verificar si el archivo existe
                 if (File.Exists(rutaArchivo))
                 {
-                    // Leer todas las líneas del archivo
                     string[] lineas = File.ReadAllLines(rutaArchivo);
-
-                    // Recorrer cada línea en busca del texto
                     foreach (string linea in lineas)
                     {
                         if (linea.Contains(rnc))
@@ -253,7 +229,6 @@ namespace SistemaFerreteriaV8
                             MessageBox.Show(linea.Replace("|", " "), "RNC encontrado!");
                             datos[0] = rnc;
                             datos[1] = linea.Split('|')[1];
-                            // Muestra la línea que contiene el texto
                         }
                     }
                 }
@@ -267,6 +242,6 @@ namespace SistemaFerreteriaV8
             {
                 return null;
             }
-        }       
+        }
     }
 }

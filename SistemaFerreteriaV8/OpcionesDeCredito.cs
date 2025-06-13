@@ -193,5 +193,10 @@ namespace SistemaFerreteriaV8
         private void ListaCreditos_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
         }
+
+        private void Editar_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

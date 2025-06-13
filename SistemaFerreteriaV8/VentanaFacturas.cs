@@ -11,58 +11,92 @@ namespace SistemaFerreteriaV8
 {
     public partial class VentanaFacturas : Form
     {
-        private ObjectId? lastId = null; // Para la paginación eficiente
+        private ObjectId? lastId = null; // Para paginación si lo usas
         private const int pageSize = 20;
+
+        private ProgressBar progressBarLoading;
 
         public VentanaFacturas()
         {
             InitializeComponent();
-           
+
+            // Crear y configurar el ProgressBar manualmente
+            progressBarLoading = new ProgressBar
+            {
+                Name = "progressBarLoading",
+                Style = ProgressBarStyle.Marquee,
+                MarqueeAnimationSpeed = 30,
+                Visible = false,
+                Width = 100,   // o pon Location/Size a tu gusto
+                Height = 20,
+                Left = 508,
+                Top = 85
+            };
+
+            // Añadirlo al formulario
+            this.Controls.Add(progressBarLoading);
+            // Opcional: para que quede delante de otros controles
+            this.Controls.SetChildIndex(progressBarLoading, 0);
         }
 
-        private void VentanaFacturas_Load(object sender, EventArgs e)
+        private async void VentanaFacturas_Load(object sender, EventArgs e)
         {
-            Fecha1.Value = DateTime.Today.AddDays(-1);
-            Fecha2.Value = DateTime.Now;
-            List<Factura> lista =Factura.ListarFacturasPorFecha(DateTime.Today.AddMonths(-12),DateTime.Now);
-            foreach (Factura item in lista)
+            // 1) Configuro y muestro la barra de progreso
+            progressBarLoading.Style = ProgressBarStyle.Marquee;
+            progressBarLoading.MarqueeAnimationSpeed = 30;
+            progressBarLoading.Visible = true;
+
+            try
             {
-                ListaDeFacturas.Rows.Add(item.Id, item.Fecha
-                    );
+                Fecha1.Value = DateTime.Today.AddDays(-1);
+                Fecha2.Value = DateTime.Now;
+
+                // 2) Cargo las facturas de forma asíncrona
+                var lista = await Factura.ListarFacturasPorFechaAsync(
+                    DateTime.Today.AddMonths(-12),
+                    DateTime.Now);
+
+                // 3) Relleno el DataGridView
+                ListaDeFacturas.Rows.Clear();
+                foreach (Factura item in lista)
+                {
+                    ListaDeFacturas.Rows.Add(item.Id, item.Fecha);
+                }
+            }
+            finally
+            {
+                // 4) Oculto la barra de progreso
+                progressBarLoading.Visible = false;
             }
         }
 
-        
         private async void Id_TextChanged(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(Id.Text)) return;
 
             ListaDeFacturas.Rows.Clear();
-            List<Factura> Lista = new List<Factura>();
+            List<Factura> lista = new List<Factura>();
 
             if (comboBox1.Text == "Id" && int.TryParse(Id.Text, out int id))
             {
-                Lista = Factura.ListarFacturasPorId(id, 1, pageSize);
+                lista = await Factura.ListarFacturasPorIdAsync(id.ToString(), 1, pageSize);
             }
             else if (comboBox1.Text == "Cliente")
             {
-                Lista = Factura.ListarFacturasPorNombre(Id.Text, 1, pageSize);
+                lista = await Factura.ListarFacturasPorNombreAsync(Id.Text, 1, pageSize);
             }
 
-            foreach (var item in Lista)
+            foreach (var item in lista)
             {
-                string empleadoNombre = new Empleado().Buscar(item.IdEmpleado)?.Nombre ?? "";
-                ListaDeFacturas.Rows.Add(item.Id, item.Fecha, item.NombreCliente, item.tipoFactura,
+                var empleadoNombre = (await  Empleado.BuscarAsync(item.IdEmpleado))?.Nombre ?? "";
+                ListaDeFacturas.Rows.Add(item.Id, item.Fecha, item.NombreCliente, item.TipoFactura,
                                          item.Description + item.Informacion, empleadoNombre, item.Total, item.Enviar, item.Paga);
             }
 
-            CantidadFactura.Text = Lista.Count.ToString();
+            CantidadFactura.Text = lista.Count.ToString();
         }
 
-       // private async void button1_Click(object sender, EventArgs e) => await RellenarListaAsync(Fecha1.Value, Fecha2.Value, null);
-       // private async void button2_Click(object sender, EventArgs e) => await RellenarListaAsync(Fecha1.Value, Fecha2.Value, lastId);
-
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e) => Id.Text = String.Empty;
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e) => Id.Text = string.Empty;
 
         private async void ListaDeFacturas_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
@@ -70,11 +104,12 @@ namespace SistemaFerreteriaV8
 
             if (!int.TryParse(ListaDeFacturas[0, e.RowIndex].Value.ToString(), out int id)) return;
 
-            var facturaActiva = await Task.Run(() => Factura.Buscar(id));
+            // Buscar asíncrono
+            var facturaActiva = await Factura.BuscarAsync(id);
 
             if (facturaActiva != null)
             {
-                VentanaFactura factura = new VentanaFactura() { Factura = facturaActiva };
+                var factura = new VentanaFactura() { Factura = facturaActiva };
                 factura.Show();
             }
             else

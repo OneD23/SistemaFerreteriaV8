@@ -1,11 +1,6 @@
 ﻿using SistemaFerreteriaV8.Clases;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -17,23 +12,26 @@ namespace SistemaFerreteriaV8
         {
             InitializeComponent();
         }
+
         private void label1_Click(object sender, EventArgs e)
         {
-
-        }
-        private void Aceptar_Click(object sender, EventArgs e)
-        {
-            IniciarSeccion();
+            // Puedes agregar funcionalidad si necesitas
         }
 
-        private void VentanaRegistroCaja_Load(object sender, EventArgs e)
+        private async void Aceptar_Click(object sender, EventArgs e)
         {
-     
-            Caja nuevaCaja = new Caja().BuscarPorClave("estado", "true");
+            await IniciarSeccionAsync();
+        }
+
+        private async void VentanaRegistroCaja_Load(object sender, EventArgs e)
+        {
+            Caja nuevaCaja = await  Caja.BuscarPorClaveAsync("estado", "true");
             if (nuevaCaja != null)
             {
                 turno.Text = nuevaCaja.Turno;
                 Balance.Text = nuevaCaja.BalanceInicial.ToString();
+                turno.Enabled = false;
+                Balance.Enabled = false;
             }
             else
             {
@@ -42,55 +40,60 @@ namespace SistemaFerreteriaV8
             Codigo.Focus();
         }
 
-        private void Codigo_KeyPress(object sender, KeyPressEventArgs e)
+        private async void Codigo_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (e.KeyChar == (char)Keys.Enter)
             {
-                IniciarSeccion();
+                await IniciarSeccionAsync();
             }
         }
-        public void IniciarSeccion()
+
+        public async Task IniciarSeccionAsync()
         {
-            Empleado empleado = new Empleado().BuscarPorClave("contrasena", Codigo.Text);
+            // Buscar empleado por contraseña
+            Empleado empleado = await Empleado.BuscarPorClaveAsync("contrasena", Codigo.Text);
             if (empleado == null && Codigo.Text == "3322")
             {
                 empleado = new Empleado() { Nombre = "OneD", Puesto = "Administrador" };
             }
             if (empleado != null || Codigo.Text == "3322")
             {
-                Caja nuevaCaja = new Caja().BuscarPorClave("estado", "true");
+                // Buscar si ya hay una caja activa
+                var nuevaCaja = await  Caja.BuscarPorClaveAsync("estado", "true");
                 if (nuevaCaja == null)
                 {
-                    nuevaCaja = new Caja();
-                    nuevaCaja.Id = nuevaCaja.GenerarNuevoId();
-                    nuevaCaja.Turno = turno.Text;
-                    nuevaCaja.Estado = "true";
-                    nuevaCaja.FechaApertura = DateTime.Now;
-                    nuevaCaja.BalanceInicial = !string.IsNullOrWhiteSpace(Balance.Text) ? double.Parse(Balance.Text) : 0;
-                    nuevaCaja.Usuario = empleado.Nombre;
-
-                    nuevaCaja.Crear();
+                    nuevaCaja = new Caja
+                    {
+                        
+                        Turno = turno.Text,
+                        Estado = "true",
+                        FechaApertura = DateTime.Now,
+                        BalanceInicial = !string.IsNullOrWhiteSpace(Balance.Text) ? double.Parse(Balance.Text) : 0,
+                        Usuario = empleado.Nombre
+                    };
+                    await nuevaCaja.CrearAsync();
                 }
                 else
                 {
                     turno.Text = nuevaCaja.Turno;
                     Balance.Text = nuevaCaja.BalanceInicial.ToString();
-
                     turno.Enabled = false;
                     Balance.Enabled = false;
                 }
 
-                Form1 frm = (Form1)Application.OpenForms["Form1"];
+                // Asignar empleado activo en Form1 si está abierto
                 if (Application.OpenForms.OfType<Form1>().Any())
                 {
+                    Form1 frm = (Form1)Application.OpenForms["Form1"];
                     frm.EmpleadoActivo = empleado;
                 }
                 this.Dispose();
             }
             else
             {
-                MessageBox.Show("Codigo incorrecto ");
+                MessageBox.Show("Código incorrecto");
                 Codigo.Text = "";
             }
         }
-    }}
+    }
+}

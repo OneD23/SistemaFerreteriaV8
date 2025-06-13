@@ -102,7 +102,6 @@
             this.BoxFiltrar.TabIndex = 0;
             this.BoxFiltrar.TabStop = false;
             this.BoxFiltrar.Text = "Filtrar";
-            this.BoxFiltrar.Enter += new System.EventHandler(this.groupBox1_Enter);
             // 
             // button2
             // 
@@ -126,7 +125,6 @@
             this.button1.TabIndex = 4;
             this.button1.Text = "Exportar Lista actual";
             this.button1.UseVisualStyleBackColor = false;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // label1
             // 
@@ -384,7 +382,6 @@
             this.label17.Size = new System.Drawing.Size(147, 16);
             this.label17.TabIndex = 13;
             this.label17.Text = "Productos Vendidos";
-            this.label17.Click += new System.EventHandler(this.label17_Click);
             // 
             // pictureBox10
             // 

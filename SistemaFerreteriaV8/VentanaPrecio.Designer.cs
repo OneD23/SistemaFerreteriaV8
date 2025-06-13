@@ -54,7 +54,7 @@
             this.ListaPrecio.RowHeadersVisible = false;
             this.ListaPrecio.Size = new System.Drawing.Size(403, 150);
             this.ListaPrecio.TabIndex = 0;
-            this.ListaPrecio.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.ListaPrecio_CellClick);
+            
             this.ListaPrecio.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.ListaPrecio_CellContentClick);
             // 
             // Column1
