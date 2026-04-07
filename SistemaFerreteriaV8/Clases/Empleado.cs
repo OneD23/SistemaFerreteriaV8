@@ -41,7 +41,7 @@ namespace SistemaFerreteriaV8.Clases
 
         private static IMongoCollection<Empleado> EmpleadoCollection =>
             new MongoClient(new OneKeys().URI)
-                .GetDatabase("Ferreteria")
+                .GetDatabase(new OneKeys().DatabaseName)
                 .GetCollection<Empleado>("Empleado");
 
         public Empleado() { }
