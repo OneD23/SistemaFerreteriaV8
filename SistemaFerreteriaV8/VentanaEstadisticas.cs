@@ -48,10 +48,17 @@ namespace SistemaFerreteriaV8
             await CargarAsync(Fecha1.Value, Fecha2.Value);
         }
 
-        private void button3_Click(object sender, EventArgs e)
+        private async void button3_Click(object sender, EventArgs e)
         {
-            // Usar la nueva versión asíncrona de Reportes, para mantener homogeneidad en el código
-            _ = new Reportes().GenerarReportesAsync(Fecha1.Value, Fecha2.Value);
+            var reportes = new Reportes();
+            await reportes.GenerarReportesAsync(Fecha1.Value, Fecha2.Value);
+
+            string carpetaReportes = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Reportes");
+            Directory.CreateDirectory(carpetaReportes);
+            string rutaCsv = Path.Combine(carpetaReportes, $"ReporteVentas_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+
+            await reportes.ExportarReporteVentasCsvAsync(Fecha1.Value, Fecha2.Value, rutaCsv);
+            MessageBox.Show($"Reporte PDF generado y CSV exportado en:\n{rutaCsv}", "Reportes", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>

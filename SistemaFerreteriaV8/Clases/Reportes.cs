@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using iTextSharp.text;
@@ -98,6 +99,29 @@ namespace SistemaFerreteriaV8.Clases
             });
         }
 
+        /// <summary>
+        /// Exporta el resumen de ventas a CSV (útil para BI/Excel).
+        /// </summary>
+        public async Task ExportarReporteVentasCsvAsync(DateTime fecha1, DateTime fecha2, string rutaArchivo)
+        {
+            var facturas = await Factura.ListarFacturasPorFechaAsync(fecha1, fecha2);
+            var facturasValidas = facturas.Where(f => f != null && !f.Cotizacion && !f.Eliminada).ToList();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Id,Fecha,Cliente,RNC,TipoFactura,TipoPago,Total,Efectivo");
+
+            foreach (var f in facturasValidas)
+            {
+                string cliente = (f.NombreCliente ?? string.Empty).Replace(',', ' ');
+                string rnc = (f.RNC ?? string.Empty).Replace(',', ' ');
+                string tipoFactura = (f.TipoFactura ?? string.Empty).Replace(',', ' ');
+                string tipoPago = (f.TipoDePago ?? string.Empty).Replace(',', ' ');
+
+                sb.AppendLine($"{f.Id},{f.Fecha:yyyy-MM-dd HH:mm:ss},{cliente},{rnc},{tipoFactura},{tipoPago},{f.Total:F2},{f.Efectivo:F2}");
+            }
+
+            await File.WriteAllTextAsync(rutaArchivo, sb.ToString(), Encoding.UTF8);
+        }
 
         /// <summary>
         /// Genera un reporte de ventas con una lista de facturas.
