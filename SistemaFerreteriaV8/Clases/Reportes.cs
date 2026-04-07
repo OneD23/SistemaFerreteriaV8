@@ -191,8 +191,8 @@ namespace SistemaFerreteriaV8.Clases
                 PdfWriter.GetInstance(doc, ms);
                 doc.Open();
 
-                var config = new Configuraciones().ObtenerPorId(1);
-                string imagePath = config.Imagen;
+                var config = new Configuraciones().ObtenerPorId(1) ?? new Configuraciones();
+                string imagePath = config.Imagen ?? string.Empty;
 
                 var productosTMP = new List<ListProduct>();
                 double totalSinProcesar = 0;
