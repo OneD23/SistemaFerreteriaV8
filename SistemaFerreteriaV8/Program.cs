@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.VisualBasic;
 using MongoDB.Driver;
 using SistemaFerreteriaV8.Clases;
 
@@ -45,7 +44,7 @@ namespace SistemaFerreteriaV8
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
-            var company = Interaction.InputBox("Nombre de la empresa:", "Configuración inicial", "Mi Empresa");
+            var company = Prompt("Nombre de la empresa:", "Configuración inicial", "Mi Empresa");
             if (string.IsNullOrWhiteSpace(company))
             {
                 MessageBox.Show("Debe indicar el nombre de la empresa para continuar.", "Configuración", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -68,7 +67,7 @@ namespace SistemaFerreteriaV8
             if (isPrimaryResult == DialogResult.Yes)
             {
                 nodeRole = "Primary";
-                hostOrIp = Interaction.InputBox(
+                hostOrIp = Prompt(
                     "Host/IP donde corre MongoDB en esta PC (ej: localhost o 192.168.1.20):\n\nIPs detectadas: " + localIps,
                     "Servidor principal",
                     "localhost");
@@ -76,7 +75,7 @@ namespace SistemaFerreteriaV8
             else
             {
                 nodeRole = "Secondary";
-                hostOrIp = Interaction.InputBox(
+                hostOrIp = Prompt(
                     "IP/Host de la PC PRINCIPAL donde corre MongoDB (ej: 192.168.1.20):",
                     "Servidor secundario",
                     "");
@@ -186,6 +185,31 @@ namespace SistemaFerreteriaV8
             {
                 // Si falla en este punto, la app seguirá y el usuario puede completar configuración después.
             }
+        }
+
+        private static string Prompt(string text, string caption, string defaultValue)
+        {
+            using var form = new Form()
+            {
+                Width = 560,
+                Height = 180,
+                Text = caption,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterScreen,
+                MinimizeBox = false,
+                MaximizeBox = false
+            };
+
+            var label = new Label() { Left = 15, Top = 15, Width = 510, Text = text };
+            var box = new TextBox() { Left = 15, Top = 45, Width = 510, Text = defaultValue ?? string.Empty };
+            var ok = new Button() { Text = "Aceptar", Left = 360, Width = 80, Top = 80, DialogResult = DialogResult.OK };
+            var cancel = new Button() { Text = "Cancelar", Left = 445, Width = 80, Top = 80, DialogResult = DialogResult.Cancel };
+
+            form.Controls.AddRange(new Control[] { label, box, ok, cancel });
+            form.AcceptButton = ok;
+            form.CancelButton = cancel;
+
+            return form.ShowDialog() == DialogResult.OK ? box.Text?.Trim() ?? string.Empty : string.Empty;
         }
     }
 }
