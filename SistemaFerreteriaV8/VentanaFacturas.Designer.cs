@@ -250,22 +250,28 @@
             // 
             // button1
             // 
+            button1.BackColor = Color.FromArgb(0, 120, 215);
+            button1.FlatStyle = FlatStyle.Flat;
+            button1.ForeColor = Color.White;
             button1.Location = new Point(187, 599);
             button1.Margin = new Padding(4, 3, 4, 3);
             button1.Name = "button1";
             button1.Size = new Size(128, 45);
             button1.TabIndex = 13;
-            button1.Text = "Anterior";
+            button1.Text = "◀ Anterior";
             button1.UseVisualStyleBackColor = true;
             // 
             // button2
             // 
+            button2.BackColor = Color.FromArgb(0, 120, 215);
+            button2.FlatStyle = FlatStyle.Flat;
+            button2.ForeColor = Color.White;
             button2.Location = new Point(792, 599);
             button2.Margin = new Padding(4, 3, 4, 3);
             button2.Name = "button2";
             button2.Size = new Size(128, 45);
             button2.TabIndex = 14;
-            button2.Text = "Siguiente";
+            button2.Text = "Siguiente ▶";
             button2.UseVisualStyleBackColor = true;
             // 
             // Paginacion
@@ -278,13 +284,13 @@
             Paginacion.Name = "Paginacion";
             Paginacion.Size = new Size(132, 20);
             Paginacion.TabIndex = 15;
-            Paginacion.Text = "Total de facturas:";
+            Paginacion.Text = "Página 1 de 1";
             // 
             // VentanaFacturas
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            BackColor = Color.Black;
+            BackColor = Color.FromArgb(12, 12, 12);
             ClientSize = new Size(1265, 763);
             Controls.Add(Paginacion);
             Controls.Add(button2);
