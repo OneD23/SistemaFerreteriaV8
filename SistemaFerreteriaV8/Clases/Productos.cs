@@ -140,21 +140,21 @@ namespace SistemaFerreteriaV8.Clases
         {
             var pipeline = new[]
             {
-        // 1) Proyectamos la ganancia: (avg(precio) – Costo) * vendido
+        // 1) Proyectamos la ganancia actual con el precio base (primera posición del arreglo precio).
+        //    Si no existe precio[0], usamos 0 para evitar resultados incoherentes.
         new BsonDocument("$project",
             new BsonDocument("Ganancia",
                 new BsonDocument("$multiply", new BsonArray
                 {
-                    // aquí calculamos el promedio de todos los elementos de precio
                     new BsonDocument("$subtract", new BsonArray
                     {
-                        new BsonDocument("$avg", "$precio"),
-                        // si Costo no es numérico en la BD, puedes convertirlo:
-                        // new BsonDocument("$toDouble", "$Costo")
+                        new BsonDocument("$ifNull", new BsonArray
+                        {
+                            new BsonDocument("$arrayElemAt", new BsonArray { "$precio", 0 }),
+                            0
+                        }),
                         "$Costo"
                     }),
-                    // igual para vendido, convierte si fuese necesario:
-                    // new BsonDocument("$toDouble", "$vendido")
                     "$vendido"
                 })
             )
@@ -181,19 +181,21 @@ namespace SistemaFerreteriaV8.Clases
         {
             var pipeline = new[]
             {
-        // 1) Proyectamos la ganancia esperada: (avg(precio) – Costo) * cantidad
+        // 1) Proyectamos la ganancia esperada: (precio base - costo) * cantidad disponible.
+        //    Usamos precio[0] para mantener consistencia con la columna "Precios" del inventario.
         new BsonDocument("$project",
             new BsonDocument("GananciaEsperada",
                 new BsonDocument("$multiply", new BsonArray
                 {
                     new BsonDocument("$subtract", new BsonArray
                     {
-                        // Promedio de todos los precios del array
-                        new BsonDocument("$avg", "$precio"),
-                        // Si Costo no es numérico en BD, usa: new BsonDocument("$toDouble", "$Costo")
+                        new BsonDocument("$ifNull", new BsonArray
+                        {
+                            new BsonDocument("$arrayElemAt", new BsonArray { "$precio", 0 }),
+                            0
+                        }),
                         "$Costo"
                     }),
-                    // Multiplicamos por la cantidad
                     "$cantidad"
                 })
             )
