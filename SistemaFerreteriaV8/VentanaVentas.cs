@@ -73,8 +73,14 @@ namespace SistemaFerreteriaV8
             var config = new Configuraciones().ObtenerPorId(1);
             tipoFactura.Text = config?.Seleccion ?? "0";
 
-            // Generar nuevo número de factura
-            NoFactura.Text = new Factura().GenerarId().ToString();
+            // Inicializar factura activa para evitar NullReference al guardar/seleccionar productos
+            if (resetCliente || facturaActiva == null)
+            {
+                facturaActiva = new Factura();
+            }
+
+            // Mostrar número de factura actual
+            NoFactura.Text = facturaActiva.Id.ToString();
         }
 
         #endregion
@@ -196,9 +202,10 @@ namespace SistemaFerreteriaV8
             var cajaActiva = await  Caja.BuscarPorClaveAsync("estado", "true");
 
             // 3. Crear o actualizar factura
+            int idFactura = facturaActiva?.Id ?? (int.TryParse(NoFactura.Text, out var idTmp) ? idTmp : new Factura().Id);
             var factura = new Factura
             {
-                Id = facturaActiva.Id,
+                Id = idFactura,
                 //ObjectId = facturaActiva.ObjectId,
                 NombreCliente = NombreCliente.Text,
                 NombreEmpresa = cajaActiva?.Id ?? "Empresa no definida",
@@ -439,7 +446,8 @@ private void button10_Click(object sender, EventArgs e)
             if (!esCargada)
             {
                 Hora.Text = DateTime.Now.ToShortTimeString();
-                NoFactura.Text = new Factura().Id.ToString();
+                if (facturaActiva != null)
+                    NoFactura.Text = facturaActiva.Id.ToString();
             }
         }
         private void Eliminar_Click(object sender, EventArgs e)
@@ -1103,6 +1111,7 @@ private void button10_Click(object sender, EventArgs e)
             var producto = await  Productos.BuscarAsync(id);
             if (producto != null)
             {
+                codigoProducto = id;
                 await DetectaProductoAsync();
                 AsignarTotales();
             }
