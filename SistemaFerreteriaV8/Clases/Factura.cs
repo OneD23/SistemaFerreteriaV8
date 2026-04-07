@@ -17,6 +17,11 @@ namespace SistemaFerreteriaV8.Clases
     [BsonIgnoreExtraElements]
     public class Factura
     {
+        private static double ParseDoubleOrZero(string value)
+        {
+            return double.TryParse(value, out var parsed) ? parsed : 0;
+        }
+
         // Identificador nativo de MongoDB
         [BsonId]
         public int Id { get; set; }
@@ -629,8 +634,8 @@ namespace SistemaFerreteriaV8.Clases
             {
                 if (string.IsNullOrWhiteSpace(this.NFC))
                 {
-                    double ultimoNFC = double.Parse(confi.NFCActual);
-                    if (ultimoNFC <= double.Parse(confi.NFCFinal))
+                    double ultimoNFC = ParseDoubleOrZero(confi.NFCActual);
+                    if (ultimoNFC <= ParseDoubleOrZero(confi.NFCFinal))
                     {
                         // Incrementar ultimoNFC y convertirlo a cadena.
                         string numeroFormateado = (ultimoNFC + 1).ToString();
@@ -819,8 +824,8 @@ namespace SistemaFerreteriaV8.Clases
 
             if (string.IsNullOrWhiteSpace(this.NFC))
             {
-                double ultimoNFC = double.Parse(confi.SGA);
-                if (ultimoNFC < double.Parse(confi.SGF))
+                double ultimoNFC = ParseDoubleOrZero(confi.SGA);
+                if (ultimoNFC < ParseDoubleOrZero(confi.SGF))
                 {
                     // Incrementar ultimoNFC y convertirlo a cadena.
                     string numeroFormateado = (ultimoNFC + 1).ToString();

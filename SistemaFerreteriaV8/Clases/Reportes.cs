@@ -22,6 +22,11 @@ namespace SistemaFerreteriaV8.Clases
         public Factura FacturaActiva { get; set; }
         public List<ListProduct> Productos { get; set; }
 
+        private static double ParseDoubleOrZero(string value)
+        {
+            return double.TryParse(value, out var parsed) ? parsed : 0;
+        }
+
         /// <summary>
         /// Genera un reporte PDF de la venta actual de forma asíncrona y lo abre.
         /// </summary>
@@ -304,8 +309,8 @@ namespace SistemaFerreteriaV8.Clases
                 acom = "B02";
                 if (string.IsNullOrWhiteSpace(FacturaActiva.NFC))
                 {
-                    double ultimoNFC = double.Parse(config.SCCA);
-                    if (ultimoNFC <= double.Parse(config.SCCF))
+                    double ultimoNFC = ParseDoubleOrZero(config.SCCA);
+                    if (ultimoNFC <= ParseDoubleOrZero(config.SCCF))
                     {
                         string numeroFormateado = (ultimoNFC + 1).ToString().PadLeft(8, '0');
                         config.SCCA = numeroFormateado;
@@ -338,8 +343,8 @@ namespace SistemaFerreteriaV8.Clases
                 acom = "B01";
                 if (string.IsNullOrWhiteSpace(FacturaActiva.NFC))
                 {
-                    double ultimoNFC = double.Parse(config.NFCActual);
-                    if (ultimoNFC <= double.Parse(config.NFCFinal))
+                    double ultimoNFC = ParseDoubleOrZero(config.NFCActual);
+                    if (ultimoNFC <= ParseDoubleOrZero(config.NFCFinal))
                     {
                         string numeroFormateado = (ultimoNFC + 1).ToString().PadLeft(8, '0');
                         config.SCCA = numeroFormateado;
@@ -372,8 +377,8 @@ namespace SistemaFerreteriaV8.Clases
                 acom = "B15";
                 if (string.IsNullOrWhiteSpace(FacturaActiva.NFC))
                 {
-                    double ultimoNFC = double.Parse(config.SGA);
-                    if (ultimoNFC <= double.Parse(config.SGF))
+                    double ultimoNFC = ParseDoubleOrZero(config.SGA);
+                    if (ultimoNFC <= ParseDoubleOrZero(config.SGF))
                     {
                         string numeroFormateado = (ultimoNFC + 1).ToString().PadLeft(8, '0');
                         config.SCCA = numeroFormateado;
@@ -406,8 +411,8 @@ namespace SistemaFerreteriaV8.Clases
                 doc.Open();
 
                 string imagePath = "logo.png"; // Ruta por defecto del logo
-                Configuraciones config = new Configuraciones().ObtenerPorId(1);
-                if (config != null) {  imagePath = config.Imagen; }
+                Configuraciones config = new Configuraciones().ObtenerPorId(1) ?? new Configuraciones();
+                if (!string.IsNullOrWhiteSpace(config.Imagen)) { imagePath = config.Imagen; }
 
                 List<ListProduct> productosTMP = new List<ListProduct>();
                 double totalTemporal = 0;
@@ -428,7 +433,7 @@ namespace SistemaFerreteriaV8.Clases
 
                 // Numeración NCF si aplica
                 double ultimoNFC = double.TryParse(config.UltimoNFC, out double valNFC) ? valNFC : 0;
-                if (ultimoNFC <= double.Parse(config.NFCFinal ?? "0"))
+                if (ultimoNFC <= ParseDoubleOrZero(config.NFCFinal))
                 {
                     if (FacturaActiva.NFC == null)
                     {
