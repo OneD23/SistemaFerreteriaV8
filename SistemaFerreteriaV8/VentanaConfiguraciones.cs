@@ -127,7 +127,7 @@ namespace SistemaFerreteriaV8
                 comboBox1.SelectedIndex = config.Precio;
                 ruta = config.Icono;
                 ruta2 = config.Imagen;
-                FontSize.Value = int.Parse(config.FontSize);
+                FontSize.Value = int.Parse(string.IsNullOrWhiteSpace(config.FontSize) ? 0.ToString(): config.FontSize);
 
                 if (config.Icono != null)
                 {
