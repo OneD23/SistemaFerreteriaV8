@@ -40,7 +40,7 @@ namespace SistemaFerreteriaV8.Clases
         static Caja()
         {
             _cajaCollection = new MongoClient(new OneKeys().URI)
-                .GetDatabase("Ferreteria")
+                .GetDatabase(new OneKeys().DatabaseName)
                 .GetCollection<Caja>("caja2");
         }
 

@@ -108,7 +108,7 @@ namespace SistemaFerreteriaV8.Clases
         [BsonElement("precio")]
         public int Precio { get; set; }
 
-        IMongoCollection<Configuraciones> Collection = new MongoClient(new OneKeys().URI).GetDatabase("Ferreteria").GetCollection<Configuraciones>("configuraciones");
+        IMongoCollection<Configuraciones> Collection = new MongoClient(new OneKeys().URI).GetDatabase(new OneKeys().DatabaseName).GetCollection<Configuraciones>("configuraciones");
 
 
        

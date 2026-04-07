@@ -81,7 +81,7 @@ namespace SistemaFerreteriaV8
         {
             // Conexión a la base de datos MongoDB
             var cliente = new MongoClient(new OneKeys().URI);
-            var database = cliente.GetDatabase("Ferreteria");
+            var database = cliente.GetDatabase(new OneKeys().DatabaseName);
             var coleccion = database.GetCollection<BsonDocument>("Productos");
 
             // Ajustar la página actual según la acción
@@ -427,7 +427,7 @@ namespace SistemaFerreteriaV8
 
                     // Configurar el cliente de MongoDB
 
-                    var collection = new MongoClient(new OneKeys().URI).GetDatabase("Ferreteria").GetCollection<Productos>("Productos");
+                    var collection = new MongoClient(new OneKeys().URI).GetDatabase(new OneKeys().DatabaseName).GetCollection<Productos>("Productos");
 
                     // Crear un filtro para buscar nombres que contengan el texto ingresado, ignorando "Generico"
                     var filtro = Builders<Productos>.Filter.And(
