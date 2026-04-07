@@ -89,7 +89,7 @@ namespace SistemaFerreteriaV8.Clases
         public static async Task<List<Productos>> ListarAsync() =>
             await _collection.Find(Builders<Productos>.Filter.Empty).ToListAsync();
 
-        public static async void TaskEliminarAsync(string id) =>
+        public static async Task TaskEliminarAsync(string id) =>
             await _collection.DeleteOneAsync(p => p.Id == id);
 
         #endregion
