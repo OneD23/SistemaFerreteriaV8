@@ -86,17 +86,37 @@ namespace SistemaFerreteriaV8.Clases
 
         private static void CrearIndices()
         {
-            collection.Indexes.CreateOne(new CreateIndexModel<Factura>(
-                Builders<Factura>.IndexKeys.Ascending(f => f.Id),
-                new CreateIndexOptions { Unique = true, Name = "idx_factura_id" }));
+            try
+            {
+                var indicesExistentes = collection.Indexes
+                    .List()
+                    .ToList()
+                    .Select(i => i.GetValue("name", "").AsString)
+                    .ToHashSet();
 
-            collection.Indexes.CreateOne(new CreateIndexModel<Factura>(
-                Builders<Factura>.IndexKeys.Descending(f => f.Fecha),
-                new CreateIndexOptions { Name = "idx_factura_fecha_desc" }));
+                // Nota: Id está marcado como [BsonId] y ya usa el índice único por defecto (_id_).
+                if (!indicesExistentes.Contains("idx_factura_fecha_desc"))
+                {
+                    collection.Indexes.CreateOne(new CreateIndexModel<Factura>(
+                        Builders<Factura>.IndexKeys.Descending(f => f.Fecha),
+                        new CreateIndexOptions { Name = "idx_factura_fecha_desc" }));
+                }
 
-            collection.Indexes.CreateOne(new CreateIndexModel<Factura>(
-                Builders<Factura>.IndexKeys.Ascending(f => f.NombreCliente),
-                new CreateIndexOptions { Name = "idx_factura_nombre_cliente" }));
+                if (!indicesExistentes.Contains("idx_factura_nombre_cliente"))
+                {
+                    collection.Indexes.CreateOne(new CreateIndexModel<Factura>(
+                        Builders<Factura>.IndexKeys.Ascending(f => f.NombreCliente),
+                        new CreateIndexOptions { Name = "idx_factura_nombre_cliente" }));
+                }
+            }
+            catch (MongoCommandException)
+            {
+                // Evita romper la inicialización del tipo por un problema de índices existente en BD.
+            }
+            catch (MongoException)
+            {
+                // Evita romper la inicialización del tipo por errores transitorios/conectividad en MongoDB.
+            }
         }
 
         // Secuenciador atómico para Ids correlativos
