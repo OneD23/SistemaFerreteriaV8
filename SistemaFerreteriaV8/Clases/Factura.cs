@@ -76,7 +76,7 @@ namespace SistemaFerreteriaV8.Clases
 
         // Mongo Collection (singleton)
         private static readonly IMongoCollection<Factura> collection = new MongoClient(new OneKeys().URI)
-            .GetDatabase("Ferreteria")
+            .GetDatabase(new OneKeys().DatabaseName)
             .GetCollection<Factura>("facturas");
 
         static Factura()
@@ -123,7 +123,7 @@ namespace SistemaFerreteriaV8.Clases
         private static int GetNextSequenceValue(string name)
         {
             var counterCollection = new MongoClient(new OneKeys().URI)
-                .GetDatabase("Ferreteria")
+                .GetDatabase(new OneKeys().DatabaseName)
                 .GetCollection<BsonDocument>("counters");
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", name);
@@ -990,7 +990,7 @@ namespace SistemaFerreteriaV8.Clases
         // Colección de facturas (ajusta el tipo si es necesario)
         private static IMongoCollection<BsonDocument> collection2 =
             new MongoClient(new OneKeys().URI)
-                .GetDatabase("Ferreteria")
+                .GetDatabase(new OneKeys().DatabaseName)
                 .GetCollection<BsonDocument>("factura");
 
         // Este método agrega el campo ObjectId a facturas que no lo tienen

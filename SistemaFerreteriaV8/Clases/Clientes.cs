@@ -43,7 +43,7 @@ namespace SistemaFerreteriaV8.Clases
         public Cliente()
         {
             _clientesCollection = new MongoClient(new OneKeys().URI)
-                .GetDatabase("Ferreteria")
+                .GetDatabase(new OneKeys().DatabaseName)
                 .GetCollection<Cliente>("cliente");
         }
 

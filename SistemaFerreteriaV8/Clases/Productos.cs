@@ -38,7 +38,7 @@ namespace SistemaFerreteriaV8.Clases
 
         private static readonly IMongoCollection<Productos> _collection =
             new MongoClient(new OneKeys().URI)
-                .GetDatabase("Ferreteria")
+                .GetDatabase(new OneKeys().DatabaseName)
                 .GetCollection<Productos>("Productos");
 
         public Productos()
@@ -306,7 +306,7 @@ namespace SistemaFerreteriaV8.Clases
         public static async Task ExportarProductosAExcelAsync(string rutaArchivo)
         {
             var client = new MongoClient(new OneKeys().URI);
-            var col = client.GetDatabase("Ferreteria").GetCollection<Productos>("Productos");
+            var col = client.GetDatabase(new OneKeys().DatabaseName).GetCollection<Productos>("Productos");
             var all = await col.Find(Builders<Productos>.Filter.Empty).ToListAsync();
 
             using var wb = new XLWorkbook();
