@@ -1,0 +1,80 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+namespace SistemaFerreteriaV8.Clases
+{
+    public class AppInstanceSettings
+    {
+        public bool IsConfigured { get; set; }
+        public string CompanyName { get; set; } = "";
+        public string DatabaseName { get; set; } = "";
+        public string MongoUri { get; set; } = "mongodb://localhost:27017/";
+        public string NodeRole { get; set; } = "Primary";
+
+        public static string SettingsFilePath => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "SistemaFerreteriaV8",
+            "appsettings.ini");
+
+        public static AppInstanceSettings Load()
+        {
+            var settings = new AppInstanceSettings();
+
+            if (!File.Exists(SettingsFilePath))
+                return settings;
+
+            var lines = File.ReadAllLines(SettingsFilePath);
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
+                    continue;
+
+                var idx = line.IndexOf('=');
+                if (idx <= 0) continue;
+
+                var key = line.Substring(0, idx).Trim();
+                var value = line.Substring(idx + 1).Trim();
+
+                switch (key)
+                {
+                    case "is_configured":
+                        settings.IsConfigured = value.Equals("true", StringComparison.OrdinalIgnoreCase);
+                        break;
+                    case "company_name":
+                        settings.CompanyName = value;
+                        break;
+                    case "database_name":
+                        settings.DatabaseName = value;
+                        break;
+                    case "mongo_uri":
+                        settings.MongoUri = value;
+                        break;
+                    case "node_role":
+                        settings.NodeRole = value;
+                        break;
+                }
+            }
+
+            return settings;
+        }
+
+        public void Save()
+        {
+            var dir = Path.GetDirectoryName(SettingsFilePath);
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            var lines = new List<string>
+            {
+                $"is_configured={(IsConfigured ? "true" : "false")}",
+                $"company_name={CompanyName}",
+                $"database_name={DatabaseName}",
+                $"mongo_uri={MongoUri}",
+                $"node_role={NodeRole}"
+            };
+
+            File.WriteAllLines(SettingsFilePath, lines);
+        }
+    }
+}
