@@ -529,43 +529,89 @@ namespace SistemaFerreteriaV8.Clases
                 }
 
                 TextoCentro(doc, config.Nombre, 18, FontFactory.HELVETICA_BOLD);
-                TextoCentro(doc, "Reporte de Ventas.", 14, FontFactory.HELVETICA_BOLD);
-                TextoCentro(doc, $"Desde: {fecha1:dd/MM/yyyy} Hasta: {fecha2:dd/MM/yyyy}", 12, FontFactory.HELVETICA);
-
+                TextoCentro(doc, "Reporte de Ventas", 14, FontFactory.HELVETICA_BOLD);
+                TextoCentro(doc, $"Desde: {fecha1:dd/MM/yyyy}  Hasta: {fecha2:dd/MM/yyyy}", 12, FontFactory.HELVETICA);
                 doc.Add(new Paragraph("\n"));
 
-                // Tabla de detalles de facturas
+                var facturasValidas = facturas.Where(f => f != null && !f.Cotizacion && !f.Eliminada).ToList();
+                var totalFacturas = facturasValidas.Count;
+                var totalGeneral = facturasValidas.Sum(f => f.Total);
+                var ticketPromedio = totalFacturas > 0 ? totalGeneral / totalFacturas : 0;
+                var totalEfectivo = facturasValidas
+                    .Where(f => string.Equals(f.TipoDePago, "Efectivo", StringComparison.OrdinalIgnoreCase))
+                    .Sum(f => f.Total);
+                var totalCredito = facturasValidas
+                    .Where(f => string.Equals(f.TipoDePago, "Credito", StringComparison.OrdinalIgnoreCase) || string.Equals(f.TipoDePago, "Crédito", StringComparison.OrdinalIgnoreCase))
+                    .Sum(f => f.Total);
+                var porcentajeEfectivo = totalGeneral > 0 ? (totalEfectivo / totalGeneral) * 100 : 0;
+
+                PdfPTable tablaResumen = new PdfPTable(4) { WidthPercentage = 100 };
+                tablaResumen.SetWidths(new float[] { 25f, 25f, 25f, 25f });
+                tablaResumen.AddCell(new PdfPCell(new Phrase("Facturas", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))) { BackgroundColor = BaseColor.LIGHT_GRAY });
+                tablaResumen.AddCell(new PdfPCell(new Phrase("Ventas Totales", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))) { BackgroundColor = BaseColor.LIGHT_GRAY });
+                tablaResumen.AddCell(new PdfPCell(new Phrase("Ticket Promedio", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))) { BackgroundColor = BaseColor.LIGHT_GRAY });
+                tablaResumen.AddCell(new PdfPCell(new Phrase("% Efectivo", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))) { BackgroundColor = BaseColor.LIGHT_GRAY });
+
+                tablaResumen.AddCell(new PdfPCell(new Phrase(totalFacturas.ToString(), FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                tablaResumen.AddCell(new PdfPCell(new Phrase(totalGeneral.ToString("C2"), FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                tablaResumen.AddCell(new PdfPCell(new Phrase(ticketPromedio.ToString("C2"), FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                tablaResumen.AddCell(new PdfPCell(new Phrase(porcentajeEfectivo.ToString("N2") + "%", FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                doc.Add(tablaResumen);
+                doc.Add(new Paragraph("\n"));
+
                 PdfPTable table = new PdfPTable(8);
                 float[] columnWidths = { 40f, 40f, 40f, 40f, 40f, 40f, 40f, 40f };
                 table.SetWidths(columnWidths);
 
-                table.AddCell(new PdfPCell(new Phrase("RNC / CÉDULA O PASAPORTE", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
-                table.AddCell(new PdfPCell(new Phrase("NÚMERO DE COMPROBANTE FISCAL", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
-                table.AddCell(new PdfPCell(new Phrase("TIPO DE VENTA", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
-                table.AddCell(new PdfPCell(new Phrase("FECHA DEL COMPROBANTE", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
-                table.AddCell(new PdfPCell(new Phrase("MONTO DE FACTURA", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
-                table.AddCell(new PdfPCell(new Phrase("ITBIS FACTURADO", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
-                table.AddCell(new PdfPCell(new Phrase("TIPO DE PAGO", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
+                table.AddCell(new PdfPCell(new Phrase("RNC / CÉDULA", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
+                table.AddCell(new PdfPCell(new Phrase("NCF", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
+                table.AddCell(new PdfPCell(new Phrase("TIPO VENTA", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
+                table.AddCell(new PdfPCell(new Phrase("FECHA", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
+                table.AddCell(new PdfPCell(new Phrase("MONTO", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
+                table.AddCell(new PdfPCell(new Phrase("ITBIS", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
+                table.AddCell(new PdfPCell(new Phrase("PAGO", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
                 table.AddCell(new PdfPCell(new Phrase("EFECTIVO", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))));
 
-                foreach (var factura in facturas)
+                foreach (var factura in facturasValidas)
                 {
-                    table.AddCell(new PdfPCell(new Phrase(factura.RNC, FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                    table.AddCell(new PdfPCell(new Phrase(factura.RNC ?? string.Empty, FontFactory.GetFont(FontFactory.HELVETICA, 10))));
                     table.AddCell(new PdfPCell(new Phrase(
                         factura.NFC != null && factura.NFC.Split(':').Length >= 2 ? factura.NFC.Split(':')[1] : "",
                         FontFactory.GetFont(FontFactory.HELVETICA, 10))));
-                    table.AddCell(new PdfPCell(new Phrase(factura.TipoFactura, FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                    table.AddCell(new PdfPCell(new Phrase(factura.TipoFactura ?? string.Empty, FontFactory.GetFont(FontFactory.HELVETICA, 10))));
                     table.AddCell(new PdfPCell(new Phrase(factura.Fecha.ToShortDateString(), FontFactory.GetFont(FontFactory.HELVETICA, 10))));
                     table.AddCell(new PdfPCell(new Phrase(factura.Total.ToString("C2"), FontFactory.GetFont(FontFactory.HELVETICA, 10))));
                     table.AddCell(new PdfPCell(new Phrase((factura.Total * 0.18).ToString("C2"), FontFactory.GetFont(FontFactory.HELVETICA, 10))));
-                    table.AddCell(new PdfPCell(new Phrase(factura.TipoDePago, FontFactory.GetFont(FontFactory.HELVETICA, 10))));
-                    table.AddCell(new PdfPCell(new Phrase(factura.Efectivo.ToString(), FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                    table.AddCell(new PdfPCell(new Phrase(factura.TipoDePago ?? string.Empty, FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                    table.AddCell(new PdfPCell(new Phrase(factura.Efectivo.ToString("C2"), FontFactory.GetFont(FontFactory.HELVETICA, 10))));
 
                     totalVentas += factura.Total;
                 }
 
                 doc.Add(table);
-                doc.Add(new Paragraph("Total de ventas: " + totalVentas.ToString("c2"), FontFactory.GetFont(FontFactory.HELVETICA, 12)) { Alignment = Element.ALIGN_CENTER });
+                doc.Add(new Paragraph("\nTop 5 clientes por monto vendido", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 12)));
+
+                var topClientes = facturasValidas
+                    .GroupBy(f => string.IsNullOrWhiteSpace(f.NombreCliente) ? "Cliente sin nombre" : f.NombreCliente)
+                    .Select(g => new { Cliente = g.Key, Total = g.Sum(x => x.Total) })
+                    .OrderByDescending(x => x.Total)
+                    .Take(5)
+                    .ToList();
+
+                PdfPTable tablaTopClientes = new PdfPTable(2) { WidthPercentage = 60 };
+                tablaTopClientes.SetWidths(new float[] { 70f, 30f });
+                tablaTopClientes.AddCell(new PdfPCell(new Phrase("Cliente", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))) { BackgroundColor = BaseColor.LIGHT_GRAY });
+                tablaTopClientes.AddCell(new PdfPCell(new Phrase("Total", FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10))) { BackgroundColor = BaseColor.LIGHT_GRAY });
+
+                foreach (var cliente in topClientes)
+                {
+                    tablaTopClientes.AddCell(new PdfPCell(new Phrase(cliente.Cliente, FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                    tablaTopClientes.AddCell(new PdfPCell(new Phrase(cliente.Total.ToString("C2"), FontFactory.GetFont(FontFactory.HELVETICA, 10))));
+                }
+
+                doc.Add(tablaTopClientes);
+                doc.Add(new Paragraph("Total de ventas: " + totalVentas.ToString("C2"), FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 12)) { Alignment = Element.ALIGN_CENTER });
+                doc.Add(new Paragraph("Ventas a crédito: " + totalCredito.ToString("C2"), FontFactory.GetFont(FontFactory.HELVETICA, 10)) { Alignment = Element.ALIGN_CENTER });
                 doc.Close();
                 return ms.ToArray();
             }

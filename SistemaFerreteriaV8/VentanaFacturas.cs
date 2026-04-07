@@ -9,6 +9,36 @@ namespace SistemaFerreteriaV8
 {
     public partial class VentanaFacturas : Form
     {
+
+        private void ConfigurarVistaProfesional()
+        {
+            ListaDeFacturas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            ListaDeFacturas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            ListaDeFacturas.MultiSelect = false;
+            ListaDeFacturas.AllowUserToAddRows = false;
+            ListaDeFacturas.AllowUserToDeleteRows = false;
+            ListaDeFacturas.RowHeadersVisible = false;
+            ListaDeFacturas.BorderStyle = BorderStyle.None;
+            ListaDeFacturas.BackgroundColor = System.Drawing.Color.FromArgb(20, 20, 20);
+            ListaDeFacturas.EnableHeadersVisualStyles = false;
+
+            ListaDeFacturas.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(35, 35, 35);
+            ListaDeFacturas.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            ListaDeFacturas.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 10, System.Drawing.FontStyle.Bold);
+
+            ListaDeFacturas.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(18, 18, 18);
+            ListaDeFacturas.DefaultCellStyle.ForeColor = System.Drawing.Color.WhiteSmoke;
+            ListaDeFacturas.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(0, 120, 215);
+            ListaDeFacturas.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
+            ListaDeFacturas.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 10);
+
+            ListaDeFacturas.AlternatingRowsDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(28, 28, 28);
+
+            Column2.DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
+            Column6.DefaultCellStyle.Format = "C2";
+            Paginacion.Text = "Página 1 de 1";
+        }
+
         private const int pageSize = 50;
         private int currentPage = 1;
         private int totalPages = 1;
@@ -35,6 +65,7 @@ namespace SistemaFerreteriaV8
 
             this.Controls.Add(progressBarLoading);
             this.Controls.SetChildIndex(progressBarLoading, 0);
+            ConfigurarVistaProfesional();
 
             button1.Click += async (_, __) => await CambiarPaginaAsync(-1);
             button2.Click += async (_, __) => await CambiarPaginaAsync(1);
