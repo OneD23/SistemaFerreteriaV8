@@ -23,72 +23,82 @@ namespace SistemaFerreteriaV8
 
         private void Guardar_Click(object sender, EventArgs e)
         {
-            Configuraciones config = new Configuraciones();
             Configuraciones config1 = new Configuraciones().ObtenerPorId(1);
+            var errores = new List<string>();
 
-            config.Nombre = NombreEmpresa.Text;
-            config.Telefono = Telefono.Text;
-            config.Correo = Correo.Text;
-            config.Direccion = Direccion.Text;
-            config.RNC = RNC.Text;
-            config.NFCInicial = NFCInical.Text;
-            config.UltimoNFC = (double.Parse(NFCInical.Text) - 1).ToString();
-            config.NFCFinal = NFCFinal.Text;
-            config.FechaExpiracion = FechaMaxima.Value;
-            
-            config.Precio = comboBox1.SelectedIndex;
-            config.Icono = ruta;
-            config.Imagen = ruta2;
-            config.Seleccion = "Consumo";
-            config.SGI = SGI.Text;
-            config.SGF = SGF.Text;
+            if (string.IsNullOrWhiteSpace(NombreEmpresa.Text))
+                errores.Add("El nombre de la empresa es obligatorio.");
 
-            if (config.Impresora != null)
-            {
-                config.Impresora = config1.Impresora;
-            }
-            else
-            {
-                config.Impresora = comboBoxImpresoras.Text;
-            }
+            if (!double.TryParse(NFCInical.Text, out double nfcInicial))
+                errores.Add("NFC Inicial debe ser numérico.");
 
-            if (config1 == null || string.IsNullOrWhiteSpace(config1.SGA))
-            {
-                config.SGA = SGI.Text;
-            }
-            else
-            {
-                config.SGA = config1.SGA;
-            }
-            
+            if (!double.TryParse(NFCFinal.Text, out double nfcFinal))
+                errores.Add("NFC Final debe ser numérico.");
+            else if (double.TryParse(NFCInical.Text, out double nfcIniTmp) && nfcFinal < nfcIniTmp)
+                errores.Add("NFC Final no puede ser menor que NFC Inicial.");
 
-            config.SCCI = SCI.Text;
-            config.SCCF = SCF.Text;
+            if (!double.TryParse(SGI.Text, out _))
+                errores.Add("SGI debe ser numérico.");
 
-            if (config1 == null || string.IsNullOrWhiteSpace(config1.SCCA))
+            if (!double.TryParse(SGF.Text, out _))
+                errores.Add("SGF debe ser numérico.");
+
+            if (!double.TryParse(SCI.Text, out _))
+                errores.Add("SCI debe ser numérico.");
+
+            if (!double.TryParse(SCF.Text, out _))
+                errores.Add("SCF debe ser numérico.");
+
+            if (comboBox1.SelectedIndex < 0)
+                errores.Add("Debes seleccionar un tipo de precio.");
+
+            if (errores.Any())
             {
-                config.SCCA = SCI.Text;
-            }
-            else
-            {
-                config.SCCA = config1.SCCA;
+                MessageBox.Show(
+                    "Corrige estos campos antes de guardar:\n\n- " + string.Join("\n- ", errores),
+                    "Validación de configuración",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
             }
 
-
-            if (config1 == null || string.IsNullOrWhiteSpace(config1.NFCActual))
+            var config = new Configuraciones
             {
-                config.NFCActual = NFCInical.Text;
-            }
-            else
+                Id = 1,
+                Nombre = NombreEmpresa.Text.Trim(),
+                Telefono = Telefono.Text?.Trim(),
+                Correo = Correo.Text?.Trim(),
+                Direccion = Direccion.Text?.Trim(),
+                RNC = RNC.Text?.Trim(),
+                NFCInicial = nfcInicial.ToString("0"),
+                UltimoNFC = (nfcInicial - 1).ToString("0"),
+                NFCFinal = nfcFinal.ToString("0"),
+                FechaExpiracion = FechaMaxima.Value,
+                Precio = comboBox1.SelectedIndex,
+                Icono = !string.IsNullOrWhiteSpace(ruta) ? ruta : config1?.Icono,
+                Imagen = !string.IsNullOrWhiteSpace(ruta2) ? ruta2 : config1?.Imagen,
+                Seleccion = "Consumo",
+                SGI = SGI.Text.Trim(),
+                SGF = SGF.Text.Trim(),
+                SCCI = SCI.Text.Trim(),
+                SCCF = SCF.Text.Trim(),
+                FontSize = FontSize.Value.ToString(),
+                Impresora = !string.IsNullOrWhiteSpace(comboBoxImpresoras.Text) ? comboBoxImpresoras.Text : config1?.Impresora
+            };
+
+            config.SGA = string.IsNullOrWhiteSpace(config1?.SGA) ? config.SGI : config1.SGA;
+            config.SCCA = string.IsNullOrWhiteSpace(config1?.SCCA) ? config.SCCI : config1.SCCA;
+            config.NFCActual = string.IsNullOrWhiteSpace(config1?.NFCActual) ? config.NFCInicial : config1.NFCActual;
+
+            try
             {
-                config.NFCActual = config1.NFCActual;
+                config.Guardar();
+                MessageBox.Show("Configuración guardada correctamente.");
             }
-
-            config.FontSize = FontSize.Text;
-
-            config.Guardar();
-
-            MessageBox.Show("Configuracion guardada!");
+            catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo guardar la configuración:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         private void button1_Click(object sender, EventArgs e)
         {
@@ -127,7 +137,11 @@ namespace SistemaFerreteriaV8
                 comboBox1.SelectedIndex = config.Precio;
                 ruta = config.Icono;
                 ruta2 = config.Imagen;
-                FontSize.Value = int.Parse(string.IsNullOrWhiteSpace(config.FontSize) ? 0.ToString(): config.FontSize);
+                if (decimal.TryParse(config.FontSize, out decimal fontSizeVal))
+                {
+                    var valor = Math.Max(FontSize.Minimum, Math.Min(FontSize.Maximum, fontSizeVal));
+                    FontSize.Value = valor;
+                }
 
                 if (config.Icono != null)
                 {
