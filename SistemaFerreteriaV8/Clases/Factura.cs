@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace SistemaFerreteriaV8.Clases
@@ -77,6 +78,46 @@ namespace SistemaFerreteriaV8.Clases
         private static readonly IMongoCollection<Factura> collection = new MongoClient(new OneKeys().URI)
             .GetDatabase("Ferreteria")
             .GetCollection<Factura>("facturas");
+
+        static Factura()
+        {
+            CrearIndices();
+        }
+
+        private static void CrearIndices()
+        {
+            try
+            {
+                var indicesExistentes = collection.Indexes
+                    .List()
+                    .ToList()
+                    .Select(i => i.GetValue("name", "").AsString)
+                    .ToHashSet();
+
+                // Nota: Id está marcado como [BsonId] y ya usa el índice único por defecto (_id_).
+                if (!indicesExistentes.Contains("idx_factura_fecha_desc"))
+                {
+                    collection.Indexes.CreateOne(new CreateIndexModel<Factura>(
+                        Builders<Factura>.IndexKeys.Descending(f => f.Fecha),
+                        new CreateIndexOptions { Name = "idx_factura_fecha_desc" }));
+                }
+
+                if (!indicesExistentes.Contains("idx_factura_nombre_cliente"))
+                {
+                    collection.Indexes.CreateOne(new CreateIndexModel<Factura>(
+                        Builders<Factura>.IndexKeys.Ascending(f => f.NombreCliente),
+                        new CreateIndexOptions { Name = "idx_factura_nombre_cliente" }));
+                }
+            }
+            catch (MongoCommandException)
+            {
+                // Evita romper la inicialización del tipo por un problema de índices existente en BD.
+            }
+            catch (MongoException)
+            {
+                // Evita romper la inicialización del tipo por errores transitorios/conectividad en MongoDB.
+            }
+        }
 
         // Secuenciador atómico para Ids correlativos
         private static int GetNextSequenceValue(string name)
@@ -152,29 +193,80 @@ namespace SistemaFerreteriaV8.Clases
 
         #region Listados y Paginación
 
-      
+        public static async Task<(List<Factura> Facturas, long Total)> ListarFacturasPaginadasAsync(
+            DateTime fechaDesde,
+            DateTime fechaHasta,
+            int pageNumber,
+            int pageSize,
+            string tipoFiltro = "",
+            string termino = "")
+        {
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1) pageSize = 20;
 
-public static async Task<List<Factura>> ListarFacturasAsync(string clave, string valor)
-    {
-        // Validación básica de parámetros
-        if (string.IsNullOrWhiteSpace(clave))
-            throw new ArgumentException("La clave de búsqueda no puede ser nula o vacía.", nameof(clave));
+            var fechaInicio = fechaDesde.Date;
+            var fechaFin = fechaHasta.Date.AddDays(1).AddTicks(-1);
 
-        // Valor por defecto para evitar errores de regex vacíos
-        valor ??= "";
+            var filterBuilder = Builders<Factura>.Filter;
+            var filter = filterBuilder.And(
+                filterBuilder.Gte(f => f.Fecha, fechaInicio),
+                filterBuilder.Lte(f => f.Fecha, fechaFin));
 
-        // Filtro usando expresión regular (insensible a mayúsculas/minúsculas)
-        var filter = Builders<Factura>.Filter.Regex(clave, new BsonRegularExpression(valor, "i"));
+            termino = termino?.Trim() ?? string.Empty;
 
-        // Consulta asincrónica a MongoDB
-        var facturas = await collection.Find(filter).ToListAsync();
+            if (!string.IsNullOrWhiteSpace(termino))
+            {
+                if (tipoFiltro == "Id" && int.TryParse(termino, out int idFactura))
+                {
+                    filter &= filterBuilder.Eq(f => f.Id, idFactura);
+                }
+                else if (tipoFiltro == "Cliente")
+                {
+                    var safeTerm = Regex.Escape(termino);
+                    filter &= filterBuilder.Regex(f => f.NombreCliente, new BsonRegularExpression(safeTerm, "i"));
+                }
+            }
 
-        // Retorna una lista vacía si es null (seguridad extra)
-        return facturas ?? new List<Factura>();
-    }
+            var projection = Builders<Factura>.Projection
+                .Include(f => f.Id)
+                .Include(f => f.Fecha)
+                .Include(f => f.NombreCliente)
+                .Include(f => f.TipoFactura)
+                .Include(f => f.Description)
+                .Include(f => f.Informacion)
+                .Include(f => f.IdEmpleado)
+                .Include(f => f.Total)
+                .Include(f => f.Enviar)
+                .Include(f => f.Paga);
 
+            var skip = (pageNumber - 1) * pageSize;
 
-    public static async Task<(List<FacturaResumen>, double)> ListarFacturasCierre(string clave, string valor)
+            var listTask = collection.Find(filter)
+                .SortByDescending(f => f.Fecha)
+                .ThenByDescending(f => f.Id)
+                .Skip(skip)
+                .Limit(pageSize)
+                .Project<Factura>(projection)
+                .ToListAsync();
+
+            var countTask = collection.CountDocumentsAsync(filter);
+
+            await Task.WhenAll(listTask, countTask);
+            return (listTask.Result, countTask.Result);
+        }
+
+        public static async Task<List<Factura>> ListarFacturasAsync(string clave, string valor)
+        {
+            if (string.IsNullOrWhiteSpace(clave))
+                throw new ArgumentException("La clave de búsqueda no puede ser nula o vacía.", nameof(clave));
+
+            valor ??= "";
+            var filter = Builders<Factura>.Filter.Regex(clave, new BsonRegularExpression(valor, "i"));
+            var facturas = await collection.Find(filter).ToListAsync();
+            return facturas ?? new List<Factura>();
+        }
+
+        public static async Task<(List<FacturaResumen>, double)> ListarFacturasCierre(string clave, string valor)
         {
             var filter = Builders<Factura>.Filter.Regex(clave, new BsonRegularExpression(valor, "i"));
 
@@ -198,10 +290,8 @@ public static async Task<List<Factura>> ListarFacturasAsync(string clave, string
                 .ToList();
 
             double sumaTotal = facturasPagadas.Sum(f => f.Total);
-
             return (facturasPagadas, sumaTotal);
         }
-
 
         public static async Task<List<Factura>> ListarUltimasFacturasAsync()
         {
@@ -230,7 +320,10 @@ public static async Task<List<Factura>> ListarFacturasAsync(string clave, string
 
         public static async Task<List<Factura>> ListarFacturasPorIdAsync(string nombre, int pageNumber, int pageSize)
         {
-            var filter = Builders<Factura>.Filter.Regex("Id", new BsonRegularExpression(nombre, "i"));
+            if (!int.TryParse(nombre, out int idFactura))
+                return new List<Factura>();
+
+            var filter = Builders<Factura>.Filter.Eq(f => f.Id, idFactura);
             return await collection.Find(filter)
                 .Sort(Builders<Factura>.Sort.Descending("Id"))
                 .Skip((pageNumber - 1) * pageSize)
@@ -251,6 +344,7 @@ public static async Task<List<Factura>> ListarFacturasAsync(string clave, string
                 .Include(f => f.Total);
 
             return await collection.Find(filter)
+                .SortByDescending(f => f.Fecha)
                 .Project<Factura>(projection)
                 .ToListAsync();
         }
@@ -282,15 +376,7 @@ public static async Task<List<Factura>> ListarFacturasAsync(string clave, string
 
         public int GenerarId()
         {
-            var lastId = collection.AsQueryable().OrderByDescending(x => x.Id).Take(1).Select(x => x.Id).FirstOrDefault();
-
-            int newId = (lastId == null) ? 1 : (int)lastId + 1;
-
-            while (collection.Find(x => x.Id == newId).Any())
-            {
-                newId++;
-            }
-            return newId;
+            return GetNextSequenceValue("facturas_id");
         }
         // Recuerda crear los índices desde Mongo Shell:
         // db.facturas.createIndex({ "Id": 1 })
