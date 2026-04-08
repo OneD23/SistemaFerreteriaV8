@@ -94,12 +94,10 @@ namespace SistemaFerreteriaV8
                     Cantidad = cantidad,
                     Precio = precio
                 };
-
-                if (productoActual != null)
-                {
-                    productoActual.Vendido += cantidad;
-                    productoActual.ActualizarProductos();
-                }
+                // IMPORTANTE:
+                // Aquí NO se debe tocar inventario (vendido/cantidad), porque esta ventana
+                // se usa para visualizar/reimprimir/editar factura existente.
+                // El ajuste de stock solo debe ocurrir en el flujo de venta original.
                 listaProducto.Add(productos);
             }
 
