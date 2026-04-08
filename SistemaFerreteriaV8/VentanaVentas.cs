@@ -155,6 +155,7 @@ namespace SistemaFerreteriaV8
             }
 
             facturaActiva.Editada = true;
+            esCargada = true; // Evita volver a registrar inventario al guardar/venta rápida una factura ya existente.
             // Actualiza los cambios de la factura en la BD
             await facturaActiva.ActualizarFacturaAsync();
         }
@@ -866,7 +867,8 @@ private void button10_Click(object sender, EventArgs e)
 
             // Actualizar BD e inventario
             await facturaActiva.ActualizarFacturaAsync();
-            await facturaActiva.RegistrarProductosAsync(+1);
+            if (!esCargada)
+                await facturaActiva.RegistrarProductosAsync(+1);
 
             LimpiarTodo();
             }
