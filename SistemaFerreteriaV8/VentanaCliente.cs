@@ -20,6 +20,7 @@ namespace SistemaFerreteriaV8
         public VentanaCliente()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private async void VentanaCliente_Load(object sender, EventArgs e)

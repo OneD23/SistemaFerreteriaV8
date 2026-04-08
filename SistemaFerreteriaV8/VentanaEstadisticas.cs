@@ -17,6 +17,7 @@ namespace SistemaFerreteriaV8
         public VentanaEstadisticas()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private async void VentanaEstadisticas_Load(object sender, EventArgs e)

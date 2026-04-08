@@ -19,6 +19,7 @@ namespace SistemaFerreteriaV8
         public Contabilidad()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
         public void AbrirFormulario(Form hijo)
         {
