@@ -13,6 +13,7 @@ namespace SistemaFerreteriaV8
         public VentanaPrecio()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private void VentanaPrecio_Load(object sender, EventArgs e)

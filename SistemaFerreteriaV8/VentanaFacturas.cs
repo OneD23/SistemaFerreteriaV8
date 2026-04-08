@@ -50,6 +50,7 @@ namespace SistemaFerreteriaV8
         public VentanaFacturas()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
 
             progressBarLoading = new ProgressBar
             {
