@@ -19,12 +19,59 @@ namespace SistemaFerreteriaV8
         private TextBox txtColorPrimario;
         private TextBox txtColorPanel;
         private TextBox txtColorFondo;
+        private DataGridView gridSecuencias;
         public VentanaConfiguraciones()
         {
             InitializeComponent();
             InicializarSeccionTema();
+            InicializarGridSecuencias();
             AplicarTemaVisualUniforme();
             OrganizarLayoutConfiguraciones();
+        }
+        private void InicializarGridSecuencias()
+        {
+            gridSecuencias = new DataGridView
+            {
+                Name = "gridSecuencias",
+                Location = new Point(20, 35),
+                Size = new Size(470, 310),
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                RowHeadersVisible = false,
+                SelectionMode = DataGridViewSelectionMode.CellSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.FromArgb(230, 234, 240),
+                BorderStyle = BorderStyle.None
+            };
+
+            gridSecuencias.Columns.Add("Tipo", "Tipo de Secuencia");
+            gridSecuencias.Columns.Add("Desde", "Desde");
+            gridSecuencias.Columns.Add("Hasta", "Hasta");
+            gridSecuencias.Columns[0].ReadOnly = true;
+            gridSecuencias.Columns[0].FillWeight = 45;
+            gridSecuencias.Columns[1].FillWeight = 27;
+            gridSecuencias.Columns[2].FillWeight = 28;
+
+            gridSecuencias.Rows.Add("Comprobante de Consumo", "", "");
+            gridSecuencias.Rows.Add("Comprobante Fiscal", "", "");
+            gridSecuencias.Rows.Add("Comprobante Gubernamental", "", "");
+            gridSecuencias.Rows.Add("Notas de Crédito", "", "");
+
+            groupBox3.Controls.Add(gridSecuencias);
+            OcultarControlesSecuenciasAntiguos();
+        }
+        private void OcultarControlesSecuenciasAntiguos()
+        {
+            foreach (Control control in groupBox3.Controls)
+            {
+                if (control != gridSecuencias && control != FechaMaxima && control != label10)
+                {
+                    control.Visible = false;
+                }
+            }
+            label10.Visible = true;
+            FechaMaxima.Visible = true;
         }
         private void InicializarSeccionTema()
         {
@@ -131,6 +178,18 @@ namespace SistemaFerreteriaV8
                     numeric.ForeColor = Color.FromArgb(15, 23, 42);
                     numeric.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
                 }
+                else if (control is DataGridView grid)
+                {
+                    grid.EnableHeadersVisualStyles = false;
+                    grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(226, 232, 240);
+                    grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 41, 59);
+                    grid.DefaultCellStyle.BackColor = Color.White;
+                    grid.DefaultCellStyle.ForeColor = Color.FromArgb(15, 23, 42);
+                    grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(191, 219, 254);
+                    grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(15, 23, 42);
+                    grid.GridColor = Color.FromArgb(148, 163, 184);
+                    grid.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
+                }
 
                 if (control.HasChildren)
                     AplicarTemaRecursivo(control, textColor);
@@ -147,6 +206,8 @@ namespace SistemaFerreteriaV8
             groupBox3.Location = new Point(590, 30);
             groupBox3.Size = new Size(510, 470);
 
+            label10.Location = new Point(120, 372);
+            FechaMaxima.Location = new Point(235, 372);
             Guardar.Location = new Point(590, 540);
             button1.Location = new Point(760, 540);
             button2.Location = new Point(930, 540);
@@ -249,24 +310,31 @@ namespace SistemaFerreteriaV8
             if (string.IsNullOrWhiteSpace(NombreEmpresa.Text))
                 errores.Add("El nombre de la empresa es obligatorio.");
 
-            if (!double.TryParse(NFCInical.Text, out double nfcInicial))
+            string nfcInicialTxt = ObtenerDesdeGrid(1, true);
+            string nfcFinalTxt = ObtenerDesdeGrid(1, false);
+            string sgiTxt = ObtenerDesdeGrid(2, true);
+            string sgfTxt = ObtenerDesdeGrid(2, false);
+            string sciTxt = ObtenerDesdeGrid(0, true);
+            string scfTxt = ObtenerDesdeGrid(0, false);
+
+            if (!double.TryParse(nfcInicialTxt, out double nfcInicial))
                 errores.Add("NFC Inicial debe ser numérico.");
 
-            if (!double.TryParse(NFCFinal.Text, out double nfcFinal))
+            if (!double.TryParse(nfcFinalTxt, out double nfcFinal))
                 errores.Add("NFC Final debe ser numérico.");
-            else if (double.TryParse(NFCInical.Text, out double nfcIniTmp) && nfcFinal < nfcIniTmp)
+            else if (double.TryParse(nfcInicialTxt, out double nfcIniTmp) && nfcFinal < nfcIniTmp)
                 errores.Add("NFC Final no puede ser menor que NFC Inicial.");
 
-            if (!double.TryParse(SGI.Text, out _))
+            if (!double.TryParse(sgiTxt, out _))
                 errores.Add("SGI debe ser numérico.");
 
-            if (!double.TryParse(SGF.Text, out _))
+            if (!double.TryParse(sgfTxt, out _))
                 errores.Add("SGF debe ser numérico.");
 
-            if (!double.TryParse(SCI.Text, out _))
+            if (!double.TryParse(sciTxt, out _))
                 errores.Add("SCI debe ser numérico.");
 
-            if (!double.TryParse(SCF.Text, out _))
+            if (!double.TryParse(scfTxt, out _))
                 errores.Add("SCF debe ser numérico.");
 
             if (comboBox1.SelectedIndex < 0)
@@ -298,10 +366,10 @@ namespace SistemaFerreteriaV8
                 Icono = !string.IsNullOrWhiteSpace(ruta) ? ruta : config1?.Icono,
                 Imagen = !string.IsNullOrWhiteSpace(ruta2) ? ruta2 : config1?.Imagen,
                 Seleccion = "Consumo",
-                SGI = SGI.Text.Trim(),
-                SGF = SGF.Text.Trim(),
-                SCCI = SCI.Text.Trim(),
-                SCCF = SCF.Text.Trim(),
+                SGI = ObtenerDesdeGrid(2, true),
+                SGF = ObtenerDesdeGrid(2, false),
+                SCCI = ObtenerDesdeGrid(0, true),
+                SCCF = ObtenerDesdeGrid(0, false),
                 FontSize = FontSize.Value.ToString(),
                 Impresora = !string.IsNullOrWhiteSpace(comboBoxImpresoras.Text) ? comboBoxImpresoras.Text : config1?.Impresora,
                 ColorPrimario = !string.IsNullOrWhiteSpace(txtColorPrimario?.Text) ? txtColorPrimario.Text.Trim() : config1?.ColorPrimario,
@@ -312,6 +380,10 @@ namespace SistemaFerreteriaV8
             config.SGA = string.IsNullOrWhiteSpace(config1?.SGA) ? config.SGI : config1.SGA;
             config.SCCA = string.IsNullOrWhiteSpace(config1?.SCCA) ? config.SCCI : config1.SCCA;
             config.NFCActual = string.IsNullOrWhiteSpace(config1?.NFCActual) ? config.NFCInicial : config1.NFCActual;
+            config.NFCInicial = ObtenerDesdeGrid(1, true);
+            config.NFCFinal = ObtenerDesdeGrid(1, false);
+            config.SNCI = ObtenerDesdeGrid(3, true);
+            config.SNCF = ObtenerDesdeGrid(3, false);
 
             var fiscalService = new FiscalService();
             if (!fiscalService.ValidarRangos(config, out var erroresFiscales))
@@ -368,6 +440,7 @@ namespace SistemaFerreteriaV8
                 RNC.Text = config.RNC;
                 NFCInical.Text = config.NFCInicial;
                 NFCFinal.Text = config.NFCFinal;
+                CargarGridSecuenciasDesdeConfiguracion(config);
                 comboBox1.SelectedIndex = config.Precio;
                 ruta = config.Icono;
                 ruta2 = config.Imagen;
@@ -438,6 +511,26 @@ namespace SistemaFerreteriaV8
                 }         
 
             }
+        }
+        private void CargarGridSecuenciasDesdeConfiguracion(Configuraciones config)
+        {
+            if (gridSecuencias == null || gridSecuencias.Rows.Count < 4)
+                return;
+            gridSecuencias.Rows[0].Cells[1].Value = config?.SCCI ?? "";
+            gridSecuencias.Rows[0].Cells[2].Value = config?.SCCF ?? "";
+            gridSecuencias.Rows[1].Cells[1].Value = config?.NFCInicial ?? "";
+            gridSecuencias.Rows[1].Cells[2].Value = config?.NFCFinal ?? "";
+            gridSecuencias.Rows[2].Cells[1].Value = config?.SGI ?? "";
+            gridSecuencias.Rows[2].Cells[2].Value = config?.SGF ?? "";
+            gridSecuencias.Rows[3].Cells[1].Value = config?.SNCI ?? "";
+            gridSecuencias.Rows[3].Cells[2].Value = config?.SNCF ?? "";
+        }
+        private string ObtenerDesdeGrid(int rowIndex, bool desde)
+        {
+            if (gridSecuencias == null || gridSecuencias.Rows.Count <= rowIndex)
+                return "";
+            int col = desde ? 1 : 2;
+            return gridSecuencias.Rows[rowIndex].Cells[col].Value?.ToString()?.Trim() ?? "";
         }
 
         private void button4_Click(object sender, EventArgs e)

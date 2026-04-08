@@ -98,12 +98,15 @@ namespace SistemaFerreteriaV8
             button2.BackColor = Color.FromArgb(35, 156, 71);
             button3.BackColor = Color.FromArgb(53, 65, 88);
 
-            button5.Image = Properties.Resources.arrow_back_ios_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24;
-            button4.Image = Properties.Resources.arrow_forward_ios_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24;
+            button5.Image = RedimensionarIcono(Properties.Resources.arrow_back_ios_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24, 16, 16);
+            button4.Image = RedimensionarIcono(Properties.Resources.arrow_forward_ios_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24, 16, 16);
             button5.ImageAlign = ContentAlignment.MiddleLeft;
             button4.ImageAlign = ContentAlignment.MiddleRight;
-            button6.Image = Properties.Resources.inventory_2_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24;
+            button5.TextImageRelation = TextImageRelation.ImageBeforeText;
+            button4.TextImageRelation = TextImageRelation.TextBeforeImage;
+            button6.Image = RedimensionarIcono(Properties.Resources.inventory_2_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24, 16, 16);
             button6.ImageAlign = ContentAlignment.MiddleLeft;
+            button6.TextImageRelation = TextImageRelation.ImageBeforeText;
 
             ListaProductos.BackgroundColor = Color.FromArgb(58, 76, 107);
             ListaProductos.BorderStyle = BorderStyle.None;
@@ -131,6 +134,12 @@ namespace SistemaFerreteriaV8
             {
                 return colorPredeterminado;
             }
+        }
+        private Image RedimensionarIcono(Image imagen, int ancho, int alto)
+        {
+            if (imagen == null)
+                return null;
+            return new Bitmap(imagen, new Size(ancho, alto));
         }
 
         private void EstilizarBoton(Button boton, Color fondo)
@@ -208,22 +217,22 @@ namespace SistemaFerreteriaV8
             Cantidad.Location = new Point(xInput, yInicio + (salto * 10) - 2);
             Cantidad.Size = new Size(anchoInput, 25);
 
-            Nuevo.Location = new Point(20, 470);
-            Editar.Location = new Point(135, 470);
-            Guardar.Location = new Point(250, 470);
-            Eliminar.Location = new Point(20, 516);
-            Buscar.Location = new Point(135, 516);
-            Cancelar.Location = new Point(250, 516);
+            Nuevo.Location = new Point(20, 505);
+            Editar.Location = new Point(135, 505);
+            Guardar.Location = new Point(250, 505);
+            Eliminar.Location = new Point(20, 550);
+            Buscar.Location = new Point(135, 550);
+            Cancelar.Location = new Point(250, 550);
             foreach (var boton in new[] { Nuevo, Editar, Guardar, Eliminar, Buscar, Cancelar })
             {
                 boton.Size = new Size(100, 40);
             }
 
-            button1.Location = new Point(20, 562);
+            button1.Location = new Point(20, 595);
             button1.Size = new Size(330, 38);
-            button2.Location = new Point(20, 604);
+            button2.Location = new Point(20, 637);
             button2.Size = new Size(330, 38);
-            button3.Location = new Point(20, 646);
+            button3.Location = new Point(20, 679);
             button3.Size = new Size(330, 38);
 
             label9.Location = new Point(300, 27);
