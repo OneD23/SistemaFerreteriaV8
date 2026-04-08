@@ -359,26 +359,7 @@ namespace SistemaFerreteriaV8.Clases
                     MessageBox.Show(errorFiscal, "Aviso Fiscal", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
-            else
-            {
-                acom = fiscalService.ResolverTipo(FacturaActiva.TipoFactura) switch
-                {
-                    TipoComprobanteFiscal.Consumo => "B02",
-                    TipoComprobanteFiscal.CreditoFiscal => "B01",
-                    TipoComprobanteFiscal.Gubernamental => "B15",
-                    _ => ""
-                };
-            }
-            else
-            {
-                acom = fiscalService.ResolverTipo(FacturaActiva.TipoFactura) switch
-                {
-                    TipoComprobanteFiscal.Consumo => "B02",
-                    TipoComprobanteFiscal.CreditoFiscal => "B01",
-                    TipoComprobanteFiscal.Gubernamental => "B15",
-                    _ => ""
-                };
-            }
+            
             else
             {
                 acom = fiscalService.ResolverTipo(FacturaActiva.TipoFactura) switch

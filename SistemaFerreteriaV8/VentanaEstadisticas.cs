@@ -51,12 +51,12 @@ namespace SistemaFerreteriaV8
             TVentas.ForeColor = success;
             TGanancias.ForeColor = success;
 
-            label1.Font = new Font("Segoe UI Semibold", 11, FontStyle.Bold);
-            label2.Font = new Font("Segoe UI Semibold", 11, FontStyle.Bold);
-            label3.Font = new Font("Segoe UI Semibold", 11, FontStyle.Bold);
-            TFacturas.Font = new Font("Segoe UI", 14, FontStyle.Bold);
-            TVentas.Font = new Font("Segoe UI", 14, FontStyle.Bold);
-            TGanancias.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+            label1.Font = new System.Drawing.Font("Segoe UI Semibold", 11, FontStyle.Bold);
+            label2.Font = new System.Drawing.Font("Segoe UI Semibold", 11, FontStyle.Bold);
+            label3.Font = new System.Drawing.Font("Segoe UI Semibold", 11, FontStyle.Bold);
+            TFacturas.Font = new System.Drawing.Font("Segoe UI", 14, FontStyle.Bold);
+            TVentas.Font = new System.Drawing.Font("Segoe UI", 14, FontStyle.Bold);
+            TGanancias.Font = new System.Drawing.Font("Segoe UI", 14, FontStyle.Bold);
 
             // Botones filtro
             var botonesRango = new[] { Personalizado, Hoy, SevenDay, button1, button2, Buscar, button3 };
@@ -67,7 +67,7 @@ namespace SistemaFerreteriaV8
                 btn.FlatAppearance.BorderColor = border;
                 btn.BackColor = Color.FromArgb(15, 23, 42);
                 btn.ForeColor = textPrimary;
-                btn.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                btn.Font = new System.Drawing.Font("Segoe UI", 9, FontStyle.Bold);
             }
             Buscar.BackColor = accent;
             button3.BackColor = Color.FromArgb(2, 132, 199);
@@ -77,7 +77,7 @@ namespace SistemaFerreteriaV8
             {
                 dt.CalendarMonthBackground = card;
                 dt.CalendarForeColor = textPrimary;
-                dt.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+                dt.Font = new System.Drawing.Font("Segoe UI", 10, FontStyle.Regular);
             }
 
             // Chart style
@@ -107,8 +107,8 @@ namespace SistemaFerreteriaV8
             panel6.BorderStyle = BorderStyle.FixedSingle;
             label4.ForeColor = textPrimary;
             label6.ForeColor = textPrimary;
-            label4.Font = new Font("Segoe UI", 11, FontStyle.Bold);
-            label6.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            label4.Font = new System.Drawing.Font("Segoe UI", 11, FontStyle.Bold);
+            label6.Font = new System.Drawing.Font("Segoe UI", 11, FontStyle.Bold);
 
             AplicarEstiloGrid(ProductosBajos, card, border, textPrimary, textMuted);
             AplicarEstiloGrid(ProductsMostSales, card, border, textPrimary, textMuted);
@@ -124,14 +124,14 @@ namespace SistemaFerreteriaV8
             grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
             grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(51, 65, 85);
             grid.ColumnHeadersDefaultCellStyle.ForeColor = textPrimary;
-            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 9, FontStyle.Bold);
+            grid.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Segoe UI Semibold", 9, FontStyle.Bold);
             grid.DefaultCellStyle.BackColor = card;
             grid.DefaultCellStyle.ForeColor = textPrimary;
             grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(30, 58, 138);
             grid.DefaultCellStyle.SelectionForeColor = Color.White;
             grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(22, 32, 50);
             grid.AlternatingRowsDefaultCellStyle.ForeColor = textPrimary;
-            grid.DefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Regular);
+            grid.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9, FontStyle.Regular);
             grid.DefaultCellStyle.Padding = new Padding(3);
         }
 
