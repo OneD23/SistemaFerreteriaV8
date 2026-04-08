@@ -305,8 +305,7 @@ namespace SistemaFerreteriaV8.Clases
         {
             string acom = "";
             if (FacturaActiva.TipoFactura == "Comprobante Fiscal" && string.IsNullOrEmpty(FacturaActiva.RNC))
-                if (FacturaActiva.TipoFactura == "Comprobante Fiscal" && string.IsNullOrEmpty(FacturaActiva.RNC))
->>>>>>> master
+
             {
                 if (FacturaActiva.RNC == null || string.IsNullOrEmpty(FacturaActiva.RNC))
                 {
@@ -322,7 +321,7 @@ namespace SistemaFerreteriaV8.Clases
                         MessageBox.Show("Este código o RNC no pertenece a ningún cliente!", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
->>>>>>> master
+
             }
             else if (FacturaActiva.TipoFactura == "Comprobante Gubernamental")
             {
@@ -349,18 +348,26 @@ namespace SistemaFerreteriaV8.Clases
                 {
                     config.Guardar();
                     await FacturaActiva.ActualizarFacturaAsync();
-                    config.Guardar();
-                    await FacturaActiva.ActualizarFacturaAsync();
                 }
                 else if (!string.IsNullOrWhiteSpace(errorFiscal))
                 {
                     MessageBox.Show(errorFiscal, "Aviso Fiscal", MessageBoxButtons.OK, MessageBoxIcon.Warning);
->>>>>>> master
+
                 }
                 else if (!string.IsNullOrWhiteSpace(errorFiscal))
                 {
                     MessageBox.Show(errorFiscal, "Aviso Fiscal", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
+            }
+            else
+            {
+                acom = fiscalService.ResolverTipo(FacturaActiva.TipoFactura) switch
+                {
+                    TipoComprobanteFiscal.Consumo => "B02",
+                    TipoComprobanteFiscal.CreditoFiscal => "B01",
+                    TipoComprobanteFiscal.Gubernamental => "B15",
+                    _ => ""
+                };
             }
             else
             {
