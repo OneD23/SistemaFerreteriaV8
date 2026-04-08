@@ -304,7 +304,31 @@ namespace SistemaFerreteriaV8.Clases
         private async Task AsignarNFCYDatosClienteAsync(Document doc, Configuraciones config)
         {
             string acom = "";
+<<<<<<< codex/analyze-changes-for-improvement-msdk9w
             if (FacturaActiva.TipoFactura == "Comprobante Fiscal" && string.IsNullOrEmpty(FacturaActiva.RNC))
+=======
+            if (FacturaActiva.TipoFactura == "Consumo")
+            {
+                acom = "B02";
+                if (string.IsNullOrWhiteSpace(FacturaActiva.NFC))
+                {
+                    double ultimoNFC = ParseDoubleOrZero(config.SCCA);
+                    if (ultimoNFC <= ParseDoubleOrZero(config.SCCF))
+                    {
+                        string numeroFormateado = (ultimoNFC + 1).ToString().PadLeft(8, '0');
+                        config.SCCA = numeroFormateado;
+                        FacturaActiva.NFC = numeroFormateado;
+                        config.Guardar();
+                        await FacturaActiva.ActualizarFacturaAsync();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Ya alcanzó su secuencia de comprobante fiscal máxima");
+                    }
+                }
+            }
+            else if (FacturaActiva.TipoFactura == "Comprobante Fiscal" && string.IsNullOrEmpty(FacturaActiva.RNC))
+>>>>>>> master
             {
                 if (FacturaActiva.RNC == null || string.IsNullOrEmpty(FacturaActiva.RNC))
                 {
@@ -320,6 +344,26 @@ namespace SistemaFerreteriaV8.Clases
                         MessageBox.Show("Este código o RNC no pertenece a ningún cliente!", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
+<<<<<<< codex/analyze-changes-for-improvement-msdk9w
+=======
+                acom = "B01";
+                if (string.IsNullOrWhiteSpace(FacturaActiva.NFC))
+                {
+                    double ultimoNFC = ParseDoubleOrZero(config.NFCActual);
+                    if (ultimoNFC <= ParseDoubleOrZero(config.NFCFinal))
+                    {
+                        string numeroFormateado = (ultimoNFC + 1).ToString().PadLeft(8, '0');
+                        config.SCCA = numeroFormateado;
+                        FacturaActiva.NFC = numeroFormateado;
+                        config.Guardar();
+                        await FacturaActiva.ActualizarFacturaAsync();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Ya alcanzó su secuencia de comprobante fiscal máxima");
+                    }
+                }
+>>>>>>> master
             }
             else if (FacturaActiva.TipoFactura == "Comprobante Gubernamental")
             {
@@ -344,8 +388,24 @@ namespace SistemaFerreteriaV8.Clases
             {
                 if (fiscalService.TryAsignarNcf(FacturaActiva, config, out acom, out var errorFiscal))
                 {
+<<<<<<< codex/analyze-changes-for-improvement-msdk9w
                     config.Guardar();
                     await FacturaActiva.ActualizarFacturaAsync();
+=======
+                    double ultimoNFC = ParseDoubleOrZero(config.SGA);
+                    if (ultimoNFC <= ParseDoubleOrZero(config.SGF))
+                    {
+                        string numeroFormateado = (ultimoNFC + 1).ToString().PadLeft(8, '0');
+                        config.SCCA = numeroFormateado;
+                        FacturaActiva.NFC = numeroFormateado;
+                        config.Guardar();
+                        await FacturaActiva.ActualizarFacturaAsync();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Ya alcanzó su secuencia de comprobante fiscal máxima");
+                    }
+>>>>>>> master
                 }
                 else if (!string.IsNullOrWhiteSpace(errorFiscal))
                 {
