@@ -84,7 +84,7 @@ namespace SistemaFerreteriaV8
             }
 
             // Mostrar número de factura actual
-            NoFactura.Text = facturaActiva.Id.ToString();
+            NoFactura.Text = facturaActiva.Id > 0 ? facturaActiva.Id.ToString() : "Pendiente";
         }
 
         #endregion
@@ -169,7 +169,7 @@ namespace SistemaFerreteriaV8
         // 1. RegistrarFactura ahora como async Task, usando métodos async y evitando async void.
         public async Task RegistrarFacturaAsync(bool paga)
         {
-            if (string.IsNullOrWhiteSpace(NoFactura.Text)) return;
+            if (facturaActiva == null) return;
 
             // 1. Construir la lista de productos desde la DataGridView
             var listaProducto = ListaDeCompras.Rows
@@ -212,6 +212,9 @@ namespace SistemaFerreteriaV8
                 idFactura = idTmp;
             if (idFactura <= 0)
                 idFactura = Factura.GenerarSiguienteId();
+
+            facturaActiva.Id = idFactura;
+            NoFactura.Text = idFactura.ToString();
             var factura = new Factura
             {
                 Id = idFactura,
