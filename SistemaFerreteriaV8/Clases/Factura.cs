@@ -78,6 +78,14 @@ namespace SistemaFerreteriaV8.Clases
         public bool Cotizacion { get; set; }
         [BsonElement("eliminada")]
         public bool Eliminada { get; set; }
+        [BsonElement("motivoEliminacion")]
+        public string MotivoEliminacion { get; set; }
+        [BsonElement("eliminadaPorId")]
+        public string EliminadaPorId { get; set; }
+        [BsonElement("eliminadaPorNombre")]
+        public string EliminadaPorNombre { get; set; }
+        [BsonElement("fechaEliminacion")]
+        public DateTime? FechaEliminacion { get; set; }
 
         // Mongo Collection (singleton)
         private static readonly IMongoCollection<Factura> collection = new MongoClient(new OneKeys().URI)
@@ -179,6 +187,8 @@ namespace SistemaFerreteriaV8.Clases
         public async Task EliminarFacturaAsync()
         {
             this.Eliminada = true;
+            if (!FechaEliminacion.HasValue)
+                FechaEliminacion = DateTime.Now;
             await collection.ReplaceOneAsync(f => f.Id == this.Id, this);
         }
 
