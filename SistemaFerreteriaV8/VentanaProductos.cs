@@ -26,8 +26,200 @@ namespace SistemaFerreteriaV8
         public VentanaProductos()
         {
             InitializeComponent();
-          
-           
+            AplicarTemaProfesional();
+            OrganizarLayoutProfesional();
+        }
+        private void AplicarTemaProfesional()
+        {
+            var fondoPrincipal = Color.FromArgb(245, 247, 250);
+            var fondoPanel = Color.White;
+            var textoPrincipal = Color.FromArgb(30, 41, 59);
+            var azulPrimario = Color.FromArgb(37, 99, 235);
+            var azulSecundario = Color.FromArgb(59, 130, 246);
+            var grisBorde = Color.FromArgb(203, 213, 225);
+
+            BackColor = fondoPrincipal;
+            ForeColor = textoPrincipal;
+
+            groupBox1.BackColor = fondoPanel;
+            groupBox1.ForeColor = textoPrincipal;
+            groupBox1.Text = "Ficha de producto";
+
+            groupBox2.BackColor = fondoPanel;
+            groupBox2.ForeColor = textoPrincipal;
+            groupBox2.Text = "Inventario";
+
+            label8.ForeColor = textoPrincipal;
+            label9.ForeColor = textoPrincipal;
+            label8.BackColor = Color.Transparent;
+            label9.BackColor = Color.Transparent;
+
+            var etiquetas = new[]
+            {
+                label1, label2, label3, label4, label5, label6, label7, label10, label11, label12, label13, Lugar
+            };
+            foreach (var label in etiquetas)
+            {
+                label.ForeColor = textoPrincipal;
+                label.BackColor = Color.Transparent;
+            }
+
+            var entradas = new TextBox[] { Id, Nombre, Descripcion, Precio, Precio2, Precio3, Precio4, Costo, Cantidad, Marca, textBox1 };
+            foreach (var entrada in entradas)
+            {
+                entrada.BorderStyle = BorderStyle.FixedSingle;
+                entrada.BackColor = Color.FromArgb(248, 250, 252);
+                entrada.ForeColor = textoPrincipal;
+                entrada.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+            }
+
+            Categoria.BackColor = Color.FromArgb(248, 250, 252);
+            Categoria.ForeColor = textoPrincipal;
+            Categoria.FlatStyle = FlatStyle.Flat;
+            comboBox1.BackColor = Color.FromArgb(248, 250, 252);
+            comboBox1.ForeColor = textoPrincipal;
+            comboBox1.FlatStyle = FlatStyle.Flat;
+
+            var accionesPrincipales = new[] { Nuevo, Editar, Guardar };
+            foreach (var boton in accionesPrincipales)
+            {
+                EstilizarBoton(boton, azulPrimario);
+            }
+
+            var accionesSecundarias = new[] { Eliminar, Buscar, Cancelar, button1, button2, button3, button4, button5, button6 };
+            foreach (var boton in accionesSecundarias)
+            {
+                EstilizarBoton(boton, azulSecundario);
+            }
+
+            button2.Text = "Cargar productos desde Excel";
+
+            ListaProductos.BackgroundColor = Color.White;
+            ListaProductos.BorderStyle = BorderStyle.None;
+            ListaProductos.EnableHeadersVisualStyles = false;
+            ListaProductos.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(226, 232, 240);
+            ListaProductos.ColumnHeadersDefaultCellStyle.ForeColor = textoPrincipal;
+            ListaProductos.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
+            ListaProductos.DefaultCellStyle.BackColor = Color.White;
+            ListaProductos.DefaultCellStyle.ForeColor = textoPrincipal;
+            ListaProductos.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            ListaProductos.DefaultCellStyle.SelectionForeColor = textoPrincipal;
+            ListaProductos.GridColor = grisBorde;
+            ListaProductos.RowTemplate.Height = 28;
+            ListaProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        }
+
+        private void EstilizarBoton(Button boton, Color fondo)
+        {
+            boton.BackColor = fondo;
+            boton.ForeColor = Color.White;
+            boton.FlatStyle = FlatStyle.Flat;
+            boton.FlatAppearance.BorderSize = 0;
+            boton.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
+            boton.Cursor = Cursors.Hand;
+        }
+
+        private void OrganizarLayoutProfesional()
+        {
+            FormBorderStyle = FormBorderStyle.None;
+            ClientSize = new Size(1284, 685);
+
+            groupBox1.Location = new Point(20, 20);
+            groupBox1.Size = new Size(370, 645);
+
+            groupBox2.Location = new Point(405, 20);
+            groupBox2.Size = new Size(860, 645);
+
+            label8.Location = new Point(102, 30);
+            label8.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            label8.Text = "Producto";
+
+            int xLabel = 20;
+            int xInput = 140;
+            int yInicio = 85;
+            int salto = 38;
+            int anchoInput = 205;
+
+            label1.Location = new Point(xLabel + 72, yInicio + (salto * 0));
+            Id.Location = new Point(xInput, yInicio + (salto * 0) - 2);
+            Id.Size = new Size(anchoInput, 25);
+
+            label2.Location = new Point(xLabel + 17, yInicio + (salto * 1));
+            Nombre.Location = new Point(xInput, yInicio + (salto * 1) - 2);
+            Nombre.Size = new Size(anchoInput, 25);
+
+            label3.Location = new Point(xLabel + 3, yInicio + (salto * 2));
+            Categoria.Location = new Point(xInput, yInicio + (salto * 2) - 1);
+            Categoria.Size = new Size(anchoInput, 25);
+
+            label13.Location = new Point(xLabel + 31, yInicio + (salto * 3));
+            Marca.Location = new Point(xInput, yInicio + (salto * 3) - 2);
+            Marca.Size = new Size(anchoInput, 25);
+
+            label4.Location = new Point(xLabel, yInicio + (salto * 4));
+            Descripcion.Location = new Point(xInput, yInicio + (salto * 4) - 2);
+            Descripcion.Size = new Size(anchoInput, 25);
+
+            label5.Location = new Point(xLabel + 31, yInicio + (salto * 5));
+            Precio.Location = new Point(xInput, yInicio + (salto * 5) - 2);
+            Precio.Size = new Size(anchoInput, 25);
+
+            label10.Location = new Point(xLabel + 21, yInicio + (salto * 6));
+            Precio2.Location = new Point(xInput, yInicio + (salto * 6) - 2);
+            Precio2.Size = new Size(anchoInput, 25);
+
+            label12.Location = new Point(xLabel + 21, yInicio + (salto * 7));
+            Precio3.Location = new Point(xInput, yInicio + (salto * 7) - 2);
+            Precio3.Size = new Size(anchoInput, 25);
+
+            label11.Location = new Point(xLabel + 21, yInicio + (salto * 8));
+            Precio4.Location = new Point(xInput, yInicio + (salto * 8) - 2);
+            Precio4.Size = new Size(anchoInput, 25);
+
+            label6.Location = new Point(xLabel + 44, yInicio + (salto * 9));
+            Costo.Location = new Point(xInput, yInicio + (salto * 9) - 2);
+            Costo.Size = new Size(anchoInput, 25);
+
+            label7.Location = new Point(xLabel + 14, yInicio + (salto * 10));
+            Cantidad.Location = new Point(xInput, yInicio + (salto * 10) - 2);
+            Cantidad.Size = new Size(anchoInput, 25);
+
+            Nuevo.Location = new Point(20, 500);
+            Editar.Location = new Point(135, 500);
+            Guardar.Location = new Point(250, 500);
+            Eliminar.Location = new Point(20, 548);
+            Buscar.Location = new Point(135, 548);
+            Cancelar.Location = new Point(250, 548);
+            foreach (var boton in new[] { Nuevo, Editar, Guardar, Eliminar, Buscar, Cancelar })
+            {
+                boton.Size = new Size(100, 40);
+            }
+
+            button1.Location = new Point(20, 595);
+            button1.Size = new Size(330, 38);
+            button3.Visible = false;
+            button2.Visible = false;
+
+            label9.Location = new Point(300, 27);
+            label9.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+
+            comboBox1.Location = new Point(18, 74);
+            comboBox1.Size = new Size(145, 25);
+            textBox1.Location = new Point(170, 74);
+            textBox1.Size = new Size(300, 25);
+
+            ListaProductos.Location = new Point(18, 110);
+            ListaProductos.Size = new Size(825, 455);
+
+            Lugar.Location = new Point(350, 575);
+            button5.Location = new Point(175, 600);
+            button6.Location = new Point(380, 600);
+            button4.Location = new Point(585, 600);
+
+            foreach (var boton in new[] { button4, button5, button6 })
+            {
+                boton.Size = new Size(100, 35);
+            }
         }
         void ActivarCampos(bool enanble)
         {
