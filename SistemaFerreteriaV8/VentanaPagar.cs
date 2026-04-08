@@ -24,6 +24,7 @@ namespace SistemaFerreteriaV8
         public VentanaPagar()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private void VentanaPagar_Load(object sender, EventArgs e)

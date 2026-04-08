@@ -32,6 +32,7 @@ namespace SistemaFerreteriaV8
         public VentanaVentas()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         #region Limpieza del Formulario
@@ -80,7 +81,7 @@ namespace SistemaFerreteriaV8
             }
 
             // Mostrar número de factura actual
-            NoFactura.Text = facturaActiva.Id.ToString();
+            NoFactura.Text = facturaActiva.Id > 0 ? facturaActiva.Id.ToString() : "Pendiente";
         }
 
         #endregion
@@ -154,6 +155,7 @@ namespace SistemaFerreteriaV8
             }
 
             facturaActiva.Editada = true;
+            esCargada = true; // Evita volver a registrar inventario al guardar/venta rápida una factura ya existente.
             // Actualiza los cambios de la factura en la BD
             await facturaActiva.ActualizarFacturaAsync();
         }
@@ -164,7 +166,7 @@ namespace SistemaFerreteriaV8
         // 1. RegistrarFactura ahora como async Task, usando métodos async y evitando async void.
         public async Task RegistrarFacturaAsync(bool paga)
         {
-            if (string.IsNullOrWhiteSpace(NoFactura.Text)) return;
+            if (facturaActiva == null) return;
 
             // 1. Construir la lista de productos desde la DataGridView
             var listaProducto = ListaDeCompras.Rows
@@ -202,7 +204,14 @@ namespace SistemaFerreteriaV8
             var cajaActiva = await  Caja.BuscarPorClaveAsync("estado", "true");
 
             // 3. Crear o actualizar factura
-            int idFactura = facturaActiva?.Id ?? (int.TryParse(NoFactura.Text, out var idTmp) ? idTmp : new Factura().Id);
+            int idFactura = facturaActiva?.Id ?? 0;
+            if (idFactura <= 0 && int.TryParse(NoFactura.Text, out var idTmp))
+                idFactura = idTmp;
+            if (idFactura <= 0)
+                idFactura = Factura.GenerarSiguienteId();
+
+            facturaActiva.Id = idFactura;
+            NoFactura.Text = idFactura.ToString();
             var factura = new Factura
             {
                 Id = idFactura,
@@ -865,7 +874,8 @@ private void button10_Click(object sender, EventArgs e)
 
             // Actualizar BD e inventario
             await facturaActiva.ActualizarFacturaAsync();
-            await facturaActiva.RegistrarProductosAsync(+1);
+            if (!esCargada)
+                await facturaActiva.RegistrarProductosAsync(+1);
 
             LimpiarTodo();
             }

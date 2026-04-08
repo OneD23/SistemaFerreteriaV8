@@ -15,6 +15,7 @@ namespace SistemaFerreteriaV8
         public VentanaReportes()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private void label1_Click(object sender, EventArgs e)
