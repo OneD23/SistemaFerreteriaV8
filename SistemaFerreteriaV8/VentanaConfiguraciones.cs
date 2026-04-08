@@ -16,9 +16,229 @@ namespace SistemaFerreteriaV8
     public partial class VentanaConfiguraciones : Form
     {
         string ruta {  get; set; } string ruta2 {  get; set; }
+        private TextBox txtColorPrimario;
+        private TextBox txtColorPanel;
+        private TextBox txtColorFondo;
         public VentanaConfiguraciones()
         {
             InitializeComponent();
+            InicializarSeccionTema();
+            AplicarTemaVisualUniforme();
+            OrganizarLayoutConfiguraciones();
+        }
+        private void InicializarSeccionTema()
+        {
+            var tituloTema = new Label
+            {
+                Text = "Personalización de colores:",
+                ForeColor = Color.White,
+                Font = new Font("Microsoft Sans Serif", 11F, FontStyle.Bold),
+                Location = new Point(18, 190),
+                AutoSize = true
+            };
+
+            txtColorPrimario = CrearTextColor(new Point(160, 190));
+            txtColorPanel = CrearTextColor(new Point(160, 222));
+            txtColorFondo = CrearTextColor(new Point(160, 254));
+
+            var lblPrimario = CrearLabelColor("Primario:", new Point(18, 193));
+            var lblPanel = CrearLabelColor("Paneles:", new Point(18, 225));
+            var lblFondo = CrearLabelColor("Fondo:", new Point(18, 257));
+
+            Button btnPrimario = CrearBotonColor("Elegir", new Point(290, 188), (s, e) => SeleccionarColor(txtColorPrimario));
+            Button btnPanel = CrearBotonColor("Elegir", new Point(290, 220), (s, e) => SeleccionarColor(txtColorPanel));
+            Button btnFondo = CrearBotonColor("Elegir", new Point(290, 252), (s, e) => SeleccionarColor(txtColorFondo));
+
+            groupBox4.Controls.Add(tituloTema);
+            groupBox4.Controls.Add(lblPrimario);
+            groupBox4.Controls.Add(lblPanel);
+            groupBox4.Controls.Add(lblFondo);
+            groupBox4.Controls.Add(txtColorPrimario);
+            groupBox4.Controls.Add(txtColorPanel);
+            groupBox4.Controls.Add(txtColorFondo);
+            groupBox4.Controls.Add(btnPrimario);
+            groupBox4.Controls.Add(btnPanel);
+            groupBox4.Controls.Add(btnFondo);
+        }
+        private void AplicarTemaVisualUniforme()
+        {
+            Configuraciones config = new Configuraciones().ObtenerPorId(1);
+            Color fondo = ParseColor(config?.ColorFondo, Color.FromArgb(21, 34, 56));
+            Color panel = ParseColor(config?.ColorPanel, Color.FromArgb(36, 52, 77));
+            Color primario = ParseColor(config?.ColorPrimario, Color.FromArgb(255, 137, 0));
+            Color texto = Color.FromArgb(236, 240, 245);
+
+            BackColor = fondo;
+            groupBox1.BackColor = fondo;
+            groupBox1.ForeColor = texto;
+            groupBox2.BackColor = panel;
+            groupBox3.BackColor = panel;
+            groupBox4.BackColor = panel;
+            groupBox2.ForeColor = texto;
+            groupBox3.ForeColor = texto;
+            groupBox4.ForeColor = texto;
+
+            AplicarTemaRecursivo(groupBox1, texto);
+
+            foreach (var button in new[] { Guardar, button1, button2, button3, button4, button5 })
+            {
+                button.FlatStyle = FlatStyle.Flat;
+                button.FlatAppearance.BorderSize = 0;
+                button.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
+                button.ForeColor = Color.White;
+            }
+
+            Guardar.BackColor = primario;
+            button1.BackColor = Color.FromArgb(51, 65, 85);
+            button2.BackColor = Color.FromArgb(51, 65, 85);
+            button3.BackColor = primario;
+            button4.BackColor = primario;
+            button5.BackColor = primario;
+        }
+        private void AplicarTemaRecursivo(Control parent, Color textColor)
+        {
+            foreach (Control control in parent.Controls)
+            {
+                if (control is Label label)
+                {
+                    label.ForeColor = textColor;
+                    label.BackColor = Color.Transparent;
+                    label.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
+                }
+                else if (control is TextBox textBox)
+                {
+                    textBox.BorderStyle = BorderStyle.FixedSingle;
+                    textBox.BackColor = Color.FromArgb(243, 244, 246);
+                    textBox.ForeColor = Color.FromArgb(15, 23, 42);
+                    textBox.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+                }
+                else if (control is ComboBox comboBox)
+                {
+                    comboBox.FlatStyle = FlatStyle.Flat;
+                    comboBox.BackColor = Color.FromArgb(243, 244, 246);
+                    comboBox.ForeColor = Color.FromArgb(15, 23, 42);
+                    comboBox.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+                }
+                else if (control is DateTimePicker dateTimePicker)
+                {
+                    dateTimePicker.CalendarMonthBackground = Color.FromArgb(243, 244, 246);
+                    dateTimePicker.CalendarForeColor = Color.FromArgb(15, 23, 42);
+                    dateTimePicker.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+                }
+                else if (control is NumericUpDown numeric)
+                {
+                    numeric.BackColor = Color.FromArgb(243, 244, 246);
+                    numeric.ForeColor = Color.FromArgb(15, 23, 42);
+                    numeric.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+                }
+
+                if (control.HasChildren)
+                    AplicarTemaRecursivo(control, textColor);
+            }
+        }
+        private void OrganizarLayoutConfiguraciones()
+        {
+            groupBox1.Location = new Point(20, 12);
+            groupBox1.Size = new Size(1120, 640);
+            groupBox2.Location = new Point(16, 30);
+            groupBox2.Size = new Size(560, 255);
+            groupBox4.Location = new Point(16, 290);
+            groupBox4.Size = new Size(560, 336);
+            groupBox3.Location = new Point(590, 30);
+            groupBox3.Size = new Size(510, 470);
+
+            Guardar.Location = new Point(590, 540);
+            button1.Location = new Point(760, 540);
+            button2.Location = new Point(930, 540);
+            Guardar.Size = button1.Size = button2.Size = new Size(120, 42);
+
+            Server.Location = new Point(145, 35);
+            Server.Size = new Size(210, 25);
+            button3.Location = new Point(370, 30);
+            button3.Size = new Size(120, 34);
+            comboBoxImpresoras.Location = new Point(213, 75);
+            comboBoxImpresoras.Size = new Size(277, 25);
+            comboBox1.Location = new Point(160, 112);
+            comboBox1.Size = new Size(140, 25);
+            FontSize.Location = new Point(186, 156);
+            FontSize.Size = new Size(105, 25);
+            button4.Location = new Point(20, 300);
+            button5.Location = new Point(160, 300);
+            button4.Size = button5.Size = new Size(125, 30);
+            pictureBoxIcono.Location = new Point(55, 240);
+            pictureBox1.Location = new Point(194, 240);
+            pictureBoxIcono.Size = pictureBox1.Size = new Size(72, 50);
+        }
+        private Color ParseColor(string colorHex, Color fallback)
+        {
+            if (string.IsNullOrWhiteSpace(colorHex))
+                return fallback;
+            try
+            {
+                return ColorTranslator.FromHtml(colorHex);
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+        private Label CrearLabelColor(string texto, Point point)
+        {
+            return new Label
+            {
+                Text = texto,
+                ForeColor = Color.WhiteSmoke,
+                Location = point,
+                Font = new Font("Microsoft Sans Serif", 9.5F, FontStyle.Bold),
+                AutoSize = true
+            };
+        }
+        private TextBox CrearTextColor(Point point)
+        {
+            return new TextBox
+            {
+                Location = point,
+                Size = new Size(120, 22),
+                Text = "#FF8900"
+            };
+        }
+        private Button CrearBotonColor(string texto, Point point, EventHandler onClick)
+        {
+            var button = new Button
+            {
+                Text = texto,
+                Location = point,
+                Size = new Size(70, 24),
+                BackColor = Color.FromArgb(255, 137, 0),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Popup
+            };
+            button.Click += onClick;
+            return button;
+        }
+        private void SeleccionarColor(TextBox destino)
+        {
+            using (var colorDialog = new ColorDialog())
+            {
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    destino.Text = ColorTranslator.ToHtml(colorDialog.Color);
+                    destino.BackColor = colorDialog.Color;
+                }
+            }
+        }
+        private void AplicarPreviewColor(TextBox destino)
+        {
+            try
+            {
+                destino.BackColor = ColorTranslator.FromHtml(destino.Text);
+                destino.ForeColor = Color.Black;
+            }
+            catch
+            {
+                destino.BackColor = Color.White;
+                destino.ForeColor = Color.Black;
+            }
         }
 
         private void Guardar_Click(object sender, EventArgs e)
@@ -83,7 +303,10 @@ namespace SistemaFerreteriaV8
                 SCCI = SCI.Text.Trim(),
                 SCCF = SCF.Text.Trim(),
                 FontSize = FontSize.Value.ToString(),
-                Impresora = !string.IsNullOrWhiteSpace(comboBoxImpresoras.Text) ? comboBoxImpresoras.Text : config1?.Impresora
+                Impresora = !string.IsNullOrWhiteSpace(comboBoxImpresoras.Text) ? comboBoxImpresoras.Text : config1?.Impresora,
+                ColorPrimario = !string.IsNullOrWhiteSpace(txtColorPrimario?.Text) ? txtColorPrimario.Text.Trim() : config1?.ColorPrimario,
+                ColorPanel = !string.IsNullOrWhiteSpace(txtColorPanel?.Text) ? txtColorPanel.Text.Trim() : config1?.ColorPanel,
+                ColorFondo = !string.IsNullOrWhiteSpace(txtColorFondo?.Text) ? txtColorFondo.Text.Trim() : config1?.ColorFondo
             };
 
             config.SGA = string.IsNullOrWhiteSpace(config1?.SGA) ? config.SGI : config1.SGA;
@@ -153,6 +376,12 @@ namespace SistemaFerreteriaV8
                     var valor = Math.Max(FontSize.Minimum, Math.Min(FontSize.Maximum, fontSizeVal));
                     FontSize.Value = valor;
                 }
+                txtColorPrimario.Text = string.IsNullOrWhiteSpace(config.ColorPrimario) ? "#FF8900" : config.ColorPrimario;
+                txtColorPanel.Text = string.IsNullOrWhiteSpace(config.ColorPanel) ? "#24344D" : config.ColorPanel;
+                txtColorFondo.Text = string.IsNullOrWhiteSpace(config.ColorFondo) ? "#152238" : config.ColorFondo;
+                AplicarPreviewColor(txtColorPrimario);
+                AplicarPreviewColor(txtColorPanel);
+                AplicarPreviewColor(txtColorFondo);
 
                 if (config.Icono != null)
                 {
