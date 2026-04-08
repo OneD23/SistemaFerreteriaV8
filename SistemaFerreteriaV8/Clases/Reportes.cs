@@ -304,6 +304,9 @@ namespace SistemaFerreteriaV8.Clases
         private async Task AsignarNFCYDatosClienteAsync(Document doc, Configuraciones config)
         {
             string acom = "";
+<<<<<<< codex/analyze-changes-for-improvement-msdk9w
+            if (FacturaActiva.TipoFactura == "Comprobante Fiscal" && string.IsNullOrEmpty(FacturaActiva.RNC))
+=======
             if (FacturaActiva.TipoFactura == "Consumo")
             {
                 acom = "B02";
@@ -325,6 +328,7 @@ namespace SistemaFerreteriaV8.Clases
                 }
             }
             else if (FacturaActiva.TipoFactura == "Comprobante Fiscal" && string.IsNullOrEmpty(FacturaActiva.RNC))
+>>>>>>> master
             {
                 if (FacturaActiva.RNC == null || string.IsNullOrEmpty(FacturaActiva.RNC))
                 {
@@ -340,6 +344,8 @@ namespace SistemaFerreteriaV8.Clases
                         MessageBox.Show("Este código o RNC no pertenece a ningún cliente!", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
+<<<<<<< codex/analyze-changes-for-improvement-msdk9w
+=======
                 acom = "B01";
                 if (string.IsNullOrWhiteSpace(FacturaActiva.NFC))
                 {
@@ -357,6 +363,7 @@ namespace SistemaFerreteriaV8.Clases
                         MessageBox.Show("Ya alcanzó su secuencia de comprobante fiscal máxima");
                     }
                 }
+>>>>>>> master
             }
             else if (FacturaActiva.TipoFactura == "Comprobante Gubernamental")
             {
@@ -374,9 +381,17 @@ namespace SistemaFerreteriaV8.Clases
                         MessageBox.Show("Este código o RNC no pertenece a ningún cliente!", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
-                acom = "B15";
-                if (string.IsNullOrWhiteSpace(FacturaActiva.NFC))
+            }
+
+            var fiscalService = new FiscalService();
+            if (string.IsNullOrWhiteSpace(FacturaActiva.NFC))
+            {
+                if (fiscalService.TryAsignarNcf(FacturaActiva, config, out acom, out var errorFiscal))
                 {
+<<<<<<< codex/analyze-changes-for-improvement-msdk9w
+                    config.Guardar();
+                    await FacturaActiva.ActualizarFacturaAsync();
+=======
                     double ultimoNFC = ParseDoubleOrZero(config.SGA);
                     if (ultimoNFC <= ParseDoubleOrZero(config.SGF))
                     {
@@ -390,7 +405,22 @@ namespace SistemaFerreteriaV8.Clases
                     {
                         MessageBox.Show("Ya alcanzó su secuencia de comprobante fiscal máxima");
                     }
+>>>>>>> master
                 }
+                else if (!string.IsNullOrWhiteSpace(errorFiscal))
+                {
+                    MessageBox.Show(errorFiscal, "Aviso Fiscal", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            else
+            {
+                acom = fiscalService.ResolverTipo(FacturaActiva.TipoFactura) switch
+                {
+                    TipoComprobanteFiscal.Consumo => "B02",
+                    TipoComprobanteFiscal.CreditoFiscal => "B01",
+                    TipoComprobanteFiscal.Gubernamental => "B15",
+                    _ => ""
+                };
             }
 
             // Encabezado comprobante fiscal

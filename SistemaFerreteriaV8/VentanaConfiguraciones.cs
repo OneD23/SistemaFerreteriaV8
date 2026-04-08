@@ -90,6 +90,17 @@ namespace SistemaFerreteriaV8
             config.SCCA = string.IsNullOrWhiteSpace(config1?.SCCA) ? config.SCCI : config1.SCCA;
             config.NFCActual = string.IsNullOrWhiteSpace(config1?.NFCActual) ? config.NFCInicial : config1.NFCActual;
 
+            var fiscalService = new FiscalService();
+            if (!fiscalService.ValidarRangos(config, out var erroresFiscales))
+            {
+                MessageBox.Show(
+                    "La configuración fiscal tiene inconsistencias:\n\n- " + string.Join("\n- ", erroresFiscales),
+                    "Validación fiscal",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
             try
             {
                 config.Guardar();
