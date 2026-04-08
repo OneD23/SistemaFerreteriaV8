@@ -108,6 +108,15 @@ namespace SistemaFerreteriaV8.Clases
         [BsonElement("precio")]
         public int Precio { get; set; }
 
+        [BsonElement("colorPrimario")]
+        public string ColorPrimario { get; set; }
+
+        [BsonElement("colorPanel")]
+        public string ColorPanel { get; set; }
+
+        [BsonElement("colorFondo")]
+        public string ColorFondo { get; set; }
+
         IMongoCollection<Configuraciones> Collection = new MongoClient(new OneKeys().URI).GetDatabase(new OneKeys().DatabaseName).GetCollection<Configuraciones>("configuraciones");
 
 
@@ -177,5 +186,4 @@ namespace SistemaFerreteriaV8.Clases
         }
     }
 }
-
 
