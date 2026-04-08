@@ -131,7 +131,10 @@ namespace SistemaFerreteriaV8
             // Inicializar factura activa para evitar NullReference al guardar/seleccionar productos
             if (resetCliente || facturaActiva == null)
             {
-                facturaActiva = new Factura();
+                facturaActiva = new Factura
+                {
+                    Id = Factura.GenerarSiguienteId()
+                };
             }
 
             // Mostrar número de factura actual
