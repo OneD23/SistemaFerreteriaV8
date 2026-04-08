@@ -16,9 +16,105 @@ namespace SistemaFerreteriaV8
     public partial class VentanaConfiguraciones : Form
     {
         string ruta {  get; set; } string ruta2 {  get; set; }
+        private TextBox txtColorPrimario;
+        private TextBox txtColorPanel;
+        private TextBox txtColorFondo;
         public VentanaConfiguraciones()
         {
             InitializeComponent();
+            InicializarSeccionTema();
+        }
+        private void InicializarSeccionTema()
+        {
+            var tituloTema = new Label
+            {
+                Text = "Personalización de colores:",
+                ForeColor = Color.White,
+                Font = new Font("Microsoft Sans Serif", 11F, FontStyle.Bold),
+                Location = new Point(18, 190),
+                AutoSize = true
+            };
+
+            txtColorPrimario = CrearTextColor(new Point(160, 190));
+            txtColorPanel = CrearTextColor(new Point(160, 222));
+            txtColorFondo = CrearTextColor(new Point(160, 254));
+
+            var lblPrimario = CrearLabelColor("Primario:", new Point(18, 193));
+            var lblPanel = CrearLabelColor("Paneles:", new Point(18, 225));
+            var lblFondo = CrearLabelColor("Fondo:", new Point(18, 257));
+
+            Button btnPrimario = CrearBotonColor("Elegir", new Point(290, 188), (s, e) => SeleccionarColor(txtColorPrimario));
+            Button btnPanel = CrearBotonColor("Elegir", new Point(290, 220), (s, e) => SeleccionarColor(txtColorPanel));
+            Button btnFondo = CrearBotonColor("Elegir", new Point(290, 252), (s, e) => SeleccionarColor(txtColorFondo));
+
+            groupBox4.Controls.Add(tituloTema);
+            groupBox4.Controls.Add(lblPrimario);
+            groupBox4.Controls.Add(lblPanel);
+            groupBox4.Controls.Add(lblFondo);
+            groupBox4.Controls.Add(txtColorPrimario);
+            groupBox4.Controls.Add(txtColorPanel);
+            groupBox4.Controls.Add(txtColorFondo);
+            groupBox4.Controls.Add(btnPrimario);
+            groupBox4.Controls.Add(btnPanel);
+            groupBox4.Controls.Add(btnFondo);
+        }
+        private Label CrearLabelColor(string texto, Point point)
+        {
+            return new Label
+            {
+                Text = texto,
+                ForeColor = Color.WhiteSmoke,
+                Location = point,
+                Font = new Font("Microsoft Sans Serif", 9.5F, FontStyle.Bold),
+                AutoSize = true
+            };
+        }
+        private TextBox CrearTextColor(Point point)
+        {
+            return new TextBox
+            {
+                Location = point,
+                Size = new Size(120, 22),
+                Text = "#FF8900"
+            };
+        }
+        private Button CrearBotonColor(string texto, Point point, EventHandler onClick)
+        {
+            var button = new Button
+            {
+                Text = texto,
+                Location = point,
+                Size = new Size(70, 24),
+                BackColor = Color.FromArgb(255, 137, 0),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Popup
+            };
+            button.Click += onClick;
+            return button;
+        }
+        private void SeleccionarColor(TextBox destino)
+        {
+            using (var colorDialog = new ColorDialog())
+            {
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    destino.Text = ColorTranslator.ToHtml(colorDialog.Color);
+                    destino.BackColor = colorDialog.Color;
+                }
+            }
+        }
+        private void AplicarPreviewColor(TextBox destino)
+        {
+            try
+            {
+                destino.BackColor = ColorTranslator.FromHtml(destino.Text);
+                destino.ForeColor = Color.Black;
+            }
+            catch
+            {
+                destino.BackColor = Color.White;
+                destino.ForeColor = Color.Black;
+            }
         }
 
         private void Guardar_Click(object sender, EventArgs e)
@@ -83,7 +179,10 @@ namespace SistemaFerreteriaV8
                 SCCI = SCI.Text.Trim(),
                 SCCF = SCF.Text.Trim(),
                 FontSize = FontSize.Value.ToString(),
-                Impresora = !string.IsNullOrWhiteSpace(comboBoxImpresoras.Text) ? comboBoxImpresoras.Text : config1?.Impresora
+                Impresora = !string.IsNullOrWhiteSpace(comboBoxImpresoras.Text) ? comboBoxImpresoras.Text : config1?.Impresora,
+                ColorPrimario = !string.IsNullOrWhiteSpace(txtColorPrimario?.Text) ? txtColorPrimario.Text.Trim() : config1?.ColorPrimario,
+                ColorPanel = !string.IsNullOrWhiteSpace(txtColorPanel?.Text) ? txtColorPanel.Text.Trim() : config1?.ColorPanel,
+                ColorFondo = !string.IsNullOrWhiteSpace(txtColorFondo?.Text) ? txtColorFondo.Text.Trim() : config1?.ColorFondo
             };
 
             config.SGA = string.IsNullOrWhiteSpace(config1?.SGA) ? config.SGI : config1.SGA;
@@ -153,6 +252,12 @@ namespace SistemaFerreteriaV8
                     var valor = Math.Max(FontSize.Minimum, Math.Min(FontSize.Maximum, fontSizeVal));
                     FontSize.Value = valor;
                 }
+                txtColorPrimario.Text = string.IsNullOrWhiteSpace(config.ColorPrimario) ? "#FF8900" : config.ColorPrimario;
+                txtColorPanel.Text = string.IsNullOrWhiteSpace(config.ColorPanel) ? "#24344D" : config.ColorPanel;
+                txtColorFondo.Text = string.IsNullOrWhiteSpace(config.ColorFondo) ? "#152238" : config.ColorFondo;
+                AplicarPreviewColor(txtColorPrimario);
+                AplicarPreviewColor(txtColorPanel);
+                AplicarPreviewColor(txtColorFondo);
 
                 if (config.Icono != null)
                 {
