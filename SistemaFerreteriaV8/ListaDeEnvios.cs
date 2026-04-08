@@ -12,6 +12,7 @@ namespace SistemaFerreteriaV8
         public ListaDeEnvios()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private void button1_Click(object sender, EventArgs e)

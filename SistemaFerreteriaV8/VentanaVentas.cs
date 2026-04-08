@@ -32,6 +32,7 @@ namespace SistemaFerreteriaV8
         public VentanaVentas()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         #region Limpieza del Formulario
