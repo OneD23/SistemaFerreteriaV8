@@ -152,7 +152,6 @@ namespace SistemaFerreteriaV8.Clases
 
         public Factura()
         {
-            this.Id = GenerarId(); // Genera un Id único para la factura
             this.Fecha = DateTime.Now;
             //this.ObjectId = ObjectId.GenerateNewId();
             // Inicializa lista por defecto
@@ -176,6 +175,8 @@ namespace SistemaFerreteriaV8.Clases
 
         public async Task InsertarFacturaAsync()
         {
+            if (this.Id <= 0)
+                this.Id = GenerarId();
             await collection.InsertOneAsync(this);
         }
 
@@ -186,10 +187,45 @@ namespace SistemaFerreteriaV8.Clases
 
         public async Task EliminarFacturaAsync()
         {
+            if (this.Eliminada)
+                return;
+
+            await ReponerInventarioPorEliminacionAsync();
             this.Eliminada = true;
             if (!FechaEliminacion.HasValue)
                 FechaEliminacion = DateTime.Now;
             await collection.ReplaceOneAsync(f => f.Id == this.Id, this);
+        }
+
+        private async Task ReponerInventarioPorEliminacionAsync()
+        {
+            if (Productos == null || !Productos.Any())
+                return;
+
+            foreach (var item in Productos)
+            {
+                if (item?.Producto == null || item.Cantidad <= 0)
+                    continue;
+
+                Productos productoActual = null;
+                if (!string.IsNullOrWhiteSpace(item.Producto.Id))
+                    productoActual = new Productos().Buscar(item.Producto.Id);
+
+                if (productoActual == null && !string.IsNullOrWhiteSpace(item.Producto.Nombre))
+                    productoActual = new Productos().Buscar("nombre", item.Producto.Nombre);
+
+                if (productoActual == null)
+                    continue;
+
+                productoActual.Cantidad += item.Cantidad;
+                productoActual.Vendido = Math.Max(0, productoActual.Vendido - item.Cantidad);
+                await productoActual.ActualizarProductosAsync();
+            }
+        }
+
+        public static int GenerarSiguienteId()
+        {
+            return GetNextSequenceValue("facturas_id");
         }
 
         public static async Task<Factura> BuscarAsync(int id)
