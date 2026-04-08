@@ -80,21 +80,21 @@ namespace SistemaFerreteriaV8
                 Text = "Personalización de colores:",
                 ForeColor = Color.White,
                 Font = new Font("Microsoft Sans Serif", 11F, FontStyle.Bold),
-                Location = new Point(18, 190),
+                Location = new Point(18, 206),
                 AutoSize = true
             };
 
-            txtColorPrimario = CrearTextColor(new Point(160, 190));
-            txtColorPanel = CrearTextColor(new Point(160, 222));
-            txtColorFondo = CrearTextColor(new Point(160, 254));
+            txtColorPrimario = CrearTextColor(new Point(160, 236));
+            txtColorPanel = CrearTextColor(new Point(160, 268));
+            txtColorFondo = CrearTextColor(new Point(160, 300));
 
-            var lblPrimario = CrearLabelColor("Primario:", new Point(18, 193));
-            var lblPanel = CrearLabelColor("Paneles:", new Point(18, 225));
-            var lblFondo = CrearLabelColor("Fondo:", new Point(18, 257));
+            var lblPrimario = CrearLabelColor("Primario:", new Point(18, 239));
+            var lblPanel = CrearLabelColor("Paneles:", new Point(18, 271));
+            var lblFondo = CrearLabelColor("Fondo:", new Point(18, 303));
 
-            Button btnPrimario = CrearBotonColor("Elegir", new Point(290, 188), (s, e) => SeleccionarColor(txtColorPrimario));
-            Button btnPanel = CrearBotonColor("Elegir", new Point(290, 220), (s, e) => SeleccionarColor(txtColorPanel));
-            Button btnFondo = CrearBotonColor("Elegir", new Point(290, 252), (s, e) => SeleccionarColor(txtColorFondo));
+            Button btnPrimario = CrearBotonColor("Elegir", new Point(290, 234), (s, e) => SeleccionarColor(txtColorPrimario));
+            Button btnPanel = CrearBotonColor("Elegir", new Point(290, 266), (s, e) => SeleccionarColor(txtColorPanel));
+            Button btnFondo = CrearBotonColor("Elegir", new Point(290, 298), (s, e) => SeleccionarColor(txtColorFondo));
 
             groupBox4.Controls.Add(tituloTema);
             groupBox4.Controls.Add(lblPrimario);
@@ -223,11 +223,11 @@ namespace SistemaFerreteriaV8
             comboBox1.Size = new Size(140, 25);
             FontSize.Location = new Point(186, 156);
             FontSize.Size = new Size(105, 25);
-            button4.Location = new Point(20, 300);
-            button5.Location = new Point(160, 300);
+            button4.Location = new Point(415, 235);
+            button5.Location = new Point(415, 270);
             button4.Size = button5.Size = new Size(125, 30);
-            pictureBoxIcono.Location = new Point(55, 240);
-            pictureBox1.Location = new Point(194, 240);
+            pictureBoxIcono.Location = new Point(447, 168);
+            pictureBox1.Location = new Point(447, 101);
             pictureBoxIcono.Size = pictureBox1.Size = new Size(72, 50);
         }
         private Color ParseColor(string colorHex, Color fallback)
