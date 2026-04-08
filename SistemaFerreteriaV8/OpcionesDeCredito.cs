@@ -13,6 +13,7 @@ namespace SistemaFerreteriaV8
         public OpcionesDeCredito()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private async void OpcionesDeCredito_Load(object sender, EventArgs e)

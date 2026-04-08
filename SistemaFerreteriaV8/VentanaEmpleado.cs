@@ -18,6 +18,7 @@ namespace SistemaFerreteriaV8
         public VentanaEmpleado()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private void Nuevo_Click(object sender, EventArgs e)
