@@ -1,4 +1,5 @@
-﻿using SistemaFerreteriaV8.Clases;
+﻿using Microsoft.VisualBasic;
+using SistemaFerreteriaV8.Clases;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,9 +58,40 @@ namespace SistemaFerreteriaV8
 
         private async void Eliminar_Click(object sender, EventArgs e)
         {
+            if (Factura == null)
+                return;
+
             if (MessageBox.Show("¿Está seguro que desea eliminar esta factura?", "Aviso", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
             {
-              await Factura.EliminarFacturaAsync();
+                string motivo = Interaction.InputBox("Escriba la razón de eliminación de la factura:", "Motivo obligatorio", "");
+                if (string.IsNullOrWhiteSpace(motivo))
+                {
+                    MessageBox.Show("Debe indicar una razón para eliminar la factura.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                Form1 frmPrincipal = Application.OpenForms["Form1"] as Form1;
+                Empleado usuarioActual = frmPrincipal?.EmpleadoActivo;
+
+                Factura.MotivoEliminacion = motivo.Trim();
+                Factura.FechaEliminacion = DateTime.Now;
+                if (usuarioActual != null)
+                {
+                    Factura.EliminadaPorId = usuarioActual.Id.ToString();
+                    Factura.EliminadaPorNombre = usuarioActual.Nombre;
+                }
+                else
+                {
+                    Factura.EliminadaPorId = "N/A";
+                    Factura.EliminadaPorNombre = "Usuario no identificado";
+                }
+
+                await Factura.EliminarFacturaAsync();
+                MessageBox.Show(
+                    $"Factura eliminada correctamente.\nMotivo: {Factura.MotivoEliminacion}\nUsuario: {Factura.EliminadaPorNombre}",
+                    "Factura eliminada",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
         }
 
