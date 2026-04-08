@@ -15,6 +15,7 @@ namespace SistemaFerreteriaV8
         public VentanaFacturasPorCobrar()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private async void VentanaFacturasPorCobrar_Load(object sender, EventArgs e)

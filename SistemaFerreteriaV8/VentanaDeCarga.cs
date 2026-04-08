@@ -15,6 +15,7 @@ namespace SistemaFerreteriaV8
         public VentanaDeCarga()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private void VentanaDeCarga_Load(object sender, EventArgs e)
