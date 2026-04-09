@@ -20,6 +20,78 @@ namespace SistemaFerreteriaV8
         public VentanaCliente()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            AutoScroll = true;
+            MinimumSize = new Size(1080, 700);
+            AjustarAlineacionVisual();
+            Resize += (_, __) => AjustarAlineacionVisual();
+        }
+        private void AjustarAlineacionVisual()
+        {
+            int margen = 12;
+            int espacio = 12;
+            int altoFormulario = 380;
+
+            groupBox1.Location = new Point(margen, margen);
+            groupBox1.Size = new Size(430, altoFormulario);
+            groupBox2.Location = new Point(groupBox1.Right + espacio, margen);
+            groupBox2.Size = new Size(Math.Max(450, ClientSize.Width - groupBox1.Width - margen * 2 - espacio), altoFormulario);
+
+            int xLabel = 16;
+            int wLabel = 120;
+            int xInput = 145;
+            int inputWidth = 240;
+            int y = 36;
+            int gap = 34;
+
+            foreach (var lbl in new[] { label5, label1, label2, label4, label3, label7, label6, label8 })
+            {
+                lbl.AutoSize = false;
+                lbl.TextAlign = ContentAlignment.MiddleRight;
+                lbl.Location = new Point(xLabel, y);
+                lbl.Size = new Size(wLabel, 24);
+                y += gap;
+            }
+
+            y = 34;
+            foreach (var input in new Control[] { Id, Nombre, Cedula, Direccion, Telefono, Correo, LimiteCredito, CreditoActivo2 })
+            {
+                input.Location = new Point(xInput, y);
+                input.Size = new Size(inputWidth, 24);
+                y += gap;
+            }
+
+            Id.Width = 140;
+            foreach (var input in new Control[] { Nombre, Cedula, Direccion, Telefono, Correo, LimiteCredito, CreditoActivo2 })
+                input.Width = inputWidth;
+
+            button1.Location = new Point(xInput + Id.Width + 10, Id.Top);
+            button1.Width = 90;
+
+            ListaDeClientes.Location = new Point(10, 22);
+            ListaDeClientes.Size = new Size(groupBox2.Width - 20, groupBox2.Height - 32);
+            ListaDeClientes.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            ListaDeClientes.RowHeadersVisible = false;
+            ListaDeClientes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            ListaDeClientes.MultiSelect = false;
+
+            int yBotones = groupBox1.Height - 106;
+            int wBtn = 92;
+            int hBtn = 36;
+            int sep = 10;
+            Nuevo.SetBounds(28, yBotones, wBtn, hBtn);
+            Editar.SetBounds(28 + wBtn + sep, yBotones, wBtn, hBtn);
+            Guardar.SetBounds(28 + ((wBtn + sep) * 2), yBotones, wBtn, hBtn);
+            button3.SetBounds(28, yBotones + hBtn + 10, wBtn, hBtn);
+            BuscarTodo.SetBounds(28 + wBtn + sep, yBotones + hBtn + 10, wBtn, hBtn);
+            Cancelar.SetBounds(28 + ((wBtn + sep) * 2), yBotones + hBtn + 10, wBtn, hBtn);
+
+            button2.SetBounds(margen + 8, groupBox1.Bottom + espacio + 8, 170, 42);
+            foreach (var btn in new[] { button1, Nuevo, Editar, Guardar, button3, BuscarTodo, Cancelar, button2 })
+            {
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+            }
         }
 
         private async void VentanaCliente_Load(object sender, EventArgs e)
@@ -55,7 +127,7 @@ namespace SistemaFerreteriaV8
             Id.Text = await nuevoCliente.GenerarNuevoIdAsync();
         }
 
-        private void Guardar_Click(object sender, EventArgs e)
+        private async void Guardar_Click(object sender, EventArgs e)
         {
             Cliente nuevoCliente = new Cliente();
 
@@ -65,16 +137,22 @@ namespace SistemaFerreteriaV8
             nuevoCliente.Cedula = Cedula.Text;  
             nuevoCliente.Telefono = Telefono.Text;
             nuevoCliente.Correo = Correo.Text;
-            nuevoCliente.LimiteCredito = double.Parse(LimiteCredito.Text);
-
-            if (new Cliente().BuscarAsync(Id.Text) == null)
+            if (!double.TryParse(LimiteCredito.Text, out var limiteCredito))
             {
-                nuevoCliente.CrearAsync();
+                MessageBox.Show("Ingrese un límite de crédito válido.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            nuevoCliente.LimiteCredito = limiteCredito;
+
+            var clienteExistente = await new Cliente().BuscarAsync(Id.Text);
+            if (clienteExistente == null)
+            {
+                await nuevoCliente.CrearAsync();
                 MessageBox.Show("Cliente creado correctamente!");
             }
             else
             {
-                nuevoCliente.EditarAsync();
+                await nuevoCliente.EditarAsync();
                 MessageBox.Show("Cliente actualizado correctamente!");
             }
 

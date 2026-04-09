@@ -78,6 +78,14 @@ namespace SistemaFerreteriaV8.Clases
         public bool Cotizacion { get; set; }
         [BsonElement("eliminada")]
         public bool Eliminada { get; set; }
+        [BsonElement("motivoEliminacion")]
+        public string MotivoEliminacion { get; set; }
+        [BsonElement("eliminadaPorId")]
+        public string EliminadaPorId { get; set; }
+        [BsonElement("eliminadaPorNombre")]
+        public string EliminadaPorNombre { get; set; }
+        [BsonElement("fechaEliminacion")]
+        public DateTime? FechaEliminacion { get; set; }
 
         // Mongo Collection (singleton)
         private static readonly IMongoCollection<Factura> collection = new MongoClient(new OneKeys().URI)
@@ -144,7 +152,6 @@ namespace SistemaFerreteriaV8.Clases
 
         public Factura()
         {
-            this.Id = GenerarId(); // Genera un Id único para la factura
             this.Fecha = DateTime.Now;
             //this.ObjectId = ObjectId.GenerateNewId();
             // Inicializa lista por defecto
@@ -154,13 +161,28 @@ namespace SistemaFerreteriaV8.Clases
         // DTO para proyecciones rápidas
         public class FacturaResumen
         {
+            [BsonElement("Id")]
             public int Id { get; set; }
+
+            [BsonElement("nombreCliente")]
             public string NombreCliente { get; set; }
+
+            [BsonElement("fecha")]
             public DateTime Fecha { get; set; }
+
+            [BsonElement("total")]
             public double Total { get; set; }
+
+            [BsonElement("eliminada")]
             public bool Eliminada { get; set; }
+
+            [BsonElement("metodoDePago")]
             public string MetodoDePago { get; set; }
+
+            [BsonElement("cotizacion")]
             public bool Cotizacion { get; set; }
+
+            [BsonElement("editada")]
             public bool Editada { get; set; }
         }
 
@@ -168,6 +190,8 @@ namespace SistemaFerreteriaV8.Clases
 
         public async Task InsertarFacturaAsync()
         {
+            if (this.Id <= 0)
+                this.Id = GenerarId();
             await collection.InsertOneAsync(this);
         }
 
@@ -178,8 +202,45 @@ namespace SistemaFerreteriaV8.Clases
 
         public async Task EliminarFacturaAsync()
         {
+            if (this.Eliminada)
+                return;
+
+            await ReponerInventarioPorEliminacionAsync();
             this.Eliminada = true;
+            if (!FechaEliminacion.HasValue)
+                FechaEliminacion = DateTime.Now;
             await collection.ReplaceOneAsync(f => f.Id == this.Id, this);
+        }
+
+        private async Task ReponerInventarioPorEliminacionAsync()
+        {
+            if (Productos == null || !Productos.Any())
+                return;
+
+            foreach (var item in Productos)
+            {
+                if (item?.Producto == null || item.Cantidad <= 0)
+                    continue;
+
+                Productos productoActual = null;
+                if (!string.IsNullOrWhiteSpace(item.Producto.Id))
+                    productoActual = new Productos().Buscar(item.Producto.Id);
+
+                if (productoActual == null && !string.IsNullOrWhiteSpace(item.Producto.Nombre))
+                    productoActual = new Productos().Buscar("nombre", item.Producto.Nombre);
+
+                if (productoActual == null)
+                    continue;
+
+                productoActual.Cantidad += item.Cantidad;
+                productoActual.Vendido = Math.Max(0, productoActual.Vendido - item.Cantidad);
+                await productoActual.ActualizarProductosAsync();
+            }
+        }
+
+        public static int GenerarSiguienteId()
+        {
+            return GetNextSequenceValue("facturas_id");
         }
 
         public static async Task<Factura> BuscarAsync(int id)
@@ -204,7 +265,8 @@ namespace SistemaFerreteriaV8.Clases
             int pageNumber,
             int pageSize,
             string tipoFiltro = "",
-            string termino = "")
+            string termino = "",
+            bool incluirEliminadas = false)
         {
             if (pageNumber < 1) pageNumber = 1;
             if (pageSize < 1) pageSize = 20;
@@ -216,6 +278,9 @@ namespace SistemaFerreteriaV8.Clases
             var filter = filterBuilder.And(
                 filterBuilder.Gte(f => f.Fecha, fechaInicio),
                 filterBuilder.Lte(f => f.Fecha, fechaFin));
+
+            if (!incluirEliminadas)
+                filter &= filterBuilder.Eq(f => f.Eliminada, false);
 
             termino = termino?.Trim() ?? string.Empty;
 
@@ -269,6 +334,17 @@ namespace SistemaFerreteriaV8.Clases
             var filter = Builders<Factura>.Filter.Regex(clave, new BsonRegularExpression(valor, "i"));
             var facturas = await collection.Find(filter).ToListAsync();
             return facturas ?? new List<Factura>();
+        }
+
+        public static async Task<List<Factura>> ListarTodasAsync(bool incluirEliminadas = false)
+        {
+            var filter = incluirEliminadas
+                ? Builders<Factura>.Filter.Empty
+                : Builders<Factura>.Filter.Eq(f => f.Eliminada, false);
+
+            return await collection.Find(filter)
+                .SortByDescending(f => f.Fecha)
+                .ToListAsync();
         }
 
         public static async Task<(List<FacturaResumen>, double)> ListarFacturasCierre(string clave, string valor)
