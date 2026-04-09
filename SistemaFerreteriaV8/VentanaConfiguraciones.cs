@@ -27,6 +27,7 @@ namespace SistemaFerreteriaV8
             InicializarGridSecuencias();
             AplicarTemaVisualUniforme();
             OrganizarLayoutConfiguraciones();
+            Resize += (_, __) => OrganizarLayoutConfiguraciones();
         }
         private void InicializarGridSecuencias()
         {
@@ -197,20 +198,26 @@ namespace SistemaFerreteriaV8
         }
         private void OrganizarLayoutConfiguraciones()
         {
-            groupBox1.Location = new Point(20, 12);
-            groupBox1.Size = new Size(1120, 640);
+            int margen = 20;
+            int anchoTotal = Math.Max(980, ClientSize.Width - (margen * 2));
+            int altoTotal = Math.Max(620, ClientSize.Height - 24);
+
+            groupBox1.Location = new Point(margen, 12);
+            groupBox1.Size = new Size(anchoTotal, altoTotal);
+
+            int mitad = (groupBox1.Width - 42) / 2;
             groupBox2.Location = new Point(16, 30);
-            groupBox2.Size = new Size(560, 255);
+            groupBox2.Size = new Size(mitad, 255);
             groupBox4.Location = new Point(16, 290);
-            groupBox4.Size = new Size(560, 336);
-            groupBox3.Location = new Point(590, 30);
-            groupBox3.Size = new Size(510, 470);
+            groupBox4.Size = new Size(mitad, groupBox1.Height - 304);
+            groupBox3.Location = new Point(groupBox2.Right + 14, 30);
+            groupBox3.Size = new Size(groupBox1.Width - groupBox2.Width - 46, groupBox1.Height - 150);
 
             label10.Location = new Point(120, 372);
             FechaMaxima.Location = new Point(235, 372);
-            Guardar.Location = new Point(590, 540);
-            button1.Location = new Point(760, 540);
-            button2.Location = new Point(930, 540);
+            Guardar.Location = new Point(groupBox3.Left, groupBox1.Height - 92);
+            button1.Location = new Point(Guardar.Right + 15, groupBox1.Height - 92);
+            button2.Location = new Point(button1.Right + 15, groupBox1.Height - 92);
             Guardar.Size = button1.Size = button2.Size = new Size(120, 42);
 
             Server.Location = new Point(145, 35);
@@ -223,12 +230,20 @@ namespace SistemaFerreteriaV8
             comboBox1.Size = new Size(140, 25);
             FontSize.Location = new Point(186, 156);
             FontSize.Size = new Size(105, 25);
-            button4.Location = new Point(415, 235);
-            button5.Location = new Point(415, 270);
+            button4.Location = new Point(groupBox4.Width - 145, 235);
+            button5.Location = new Point(groupBox4.Width - 145, 270);
             button4.Size = button5.Size = new Size(125, 30);
-            pictureBoxIcono.Location = new Point(447, 168);
-            pictureBox1.Location = new Point(447, 101);
+            pictureBoxIcono.Location = new Point(groupBox4.Width - 113, 168);
+            pictureBox1.Location = new Point(groupBox4.Width - 113, 101);
             pictureBoxIcono.Size = pictureBox1.Size = new Size(72, 50);
+
+            if (gridSecuencias != null)
+            {
+                gridSecuencias.Location = new Point(16, 28);
+                gridSecuencias.Size = new Size(groupBox3.Width - 32, groupBox3.Height - 120);
+                label10.Location = new Point(Math.Max(16, (groupBox3.Width / 2) - 120), groupBox3.Height - 82);
+                FechaMaxima.Location = new Point(label10.Right + 8, groupBox3.Height - 84);
+            }
         }
         private Color ParseColor(string colorHex, Color fallback)
         {
