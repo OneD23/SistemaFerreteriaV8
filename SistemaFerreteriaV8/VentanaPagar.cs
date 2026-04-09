@@ -273,7 +273,7 @@ namespace SistemaFerreteriaV8
                 }
                 await facturaActiva.RegistrarProductosAsync(1);
 
-                var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+                var frm = WinFormsApp.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
                 frm?.LimpiarTodo();
 
                 this.Dispose();

@@ -4,6 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Octetus.ConsultasDgii.Services;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Domain.Security;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,6 +14,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static Org.BouncyCastle.Math.EC.ECCurve;
+using SistemaFerreteriaV8.Infrastructure.Security;
+using SistemaFerreteriaV8.Infrastructure.Services;
+using SistemaFerreteriaV8.AppCore.Sales;
 
 namespace SistemaFerreteriaV8
 {
@@ -178,9 +182,11 @@ namespace SistemaFerreteriaV8
             bool puedeEditar = empleado?.Puesto == "Administrador";
             if (!puedeEditar)
             {
-                string clave = Interaction.InputBox("Necesita la clave del Administrador para editar");
-                var admin = await  Empleado.BuscarPorClaveAsync("contrasena", clave);
-                puedeEditar = admin?.Puesto == "Administrador";
+                puedeEditar = await PermissionAccess.EnsurePermissionAsync(
+                    empleado,
+                    AppPermissions.VentasCancelar,
+                    this,
+                    "editar una factura");
             }
 
             if (!puedeEditar)
@@ -343,27 +349,31 @@ namespace SistemaFerreteriaV8
         // 2. AsignarTotales mantiene cálculos en UI thread
         public void AsignarTotales()
         {
-            double subtotal = 0;
-            foreach (DataGridViewRow row in ListaDeCompras.Rows)
-            {
-                if (row.Cells[5]?.Value != null && double.TryParse(row.Cells[5].Value.ToString(), out var val))
-                    subtotal += val;
-            }
+            var lines = ListaDeCompras.Rows
+                .Cast<DataGridViewRow>()
+                .Where(r => r.Cells[4]?.Value != null && r.Cells[3]?.Value != null)
+                .Select(r =>
+                {
+                    var productName = r.Cells[0]?.Value?.ToString() ?? "SinNombre";
+                    double.TryParse(r.Cells[4].Value?.ToString(), out var qty);
+                    double.TryParse(r.Cells[3].Value?.ToString(), out var price);
+                    return new SaleLineInput(
+                        ProductId: string.Empty,
+                        ProductName: productName,
+                        Quantity: qty,
+                        UnitPrice: price,
+                        AvailableStock: double.MaxValue,
+                        ProductFound: true,
+                        IsGeneric: productName.Equals("Generico", StringComparison.OrdinalIgnoreCase));
+                })
+                .ToList();
 
-            totalActivo = subtotal;
-            if (double.TryParse(ADescontar.Text.Replace("$", ""), out var dto))
-            {
-                descuentoActivo = (FiltroDescuento.SelectedIndex == 0)
-                    ? subtotal * (dto / 100.0)
-                    : dto;
-            }
-            else
-            {
-                descuentoActivo = 0;
-            }
+            var totals = AppServices.Sales.CalculateTotals(
+                lines,
+                ADescontar.Text,
+                FiltroDescuento.SelectedIndex == 0);
 
-            // Actualizar UI
-            ActualizarTotalesUI(subtotal);
+            ApplyTotals(totals);
         }
 
         // 3. ActualizarTotalesUI simplificado
@@ -372,6 +382,57 @@ namespace SistemaFerreteriaV8
             SubTotal.Text = subtotal.ToString("C2");
             Descuento.Text = descuentoActivo.ToString("C2");
             Total.Text = (subtotal - descuentoActivo).ToString("C2");
+        }
+
+        private void ApplyTotals(SalesTotals totals)
+        {
+            totalActivo = totals.Subtotal;
+            descuentoActivo = totals.Discount;
+            SubTotal.Text = totals.Subtotal.ToString("C2");
+            Descuento.Text = totals.Discount.ToString("C2");
+            Total.Text = totals.Total.ToString("C2");
+        }
+
+        private async Task<SalePreparationResult> BuildSalePreparationAsync()
+        {
+            var lines = new List<SaleLineInput>();
+
+            foreach (DataGridViewRow row in ListaDeCompras.Rows)
+            {
+                var productName = row.Cells[0]?.Value?.ToString();
+                if (string.IsNullOrWhiteSpace(productName))
+                    continue;
+
+                double.TryParse(row.Cells[4]?.Value?.ToString(), out var qty);
+                double.TryParse(row.Cells[3]?.Value?.ToString(), out var price);
+
+                var isGeneric = productName.Equals("Generico", StringComparison.OrdinalIgnoreCase);
+                double stock = double.MaxValue;
+                bool found = true;
+                string productId = string.Empty;
+
+                if (!isGeneric)
+                {
+                    var product = await Productos.BuscarPorClaveAsync("nombre", productName);
+                    found = product != null;
+                    stock = product?.Cantidad ?? 0;
+                    productId = product?.Id ?? string.Empty;
+                }
+
+                lines.Add(new SaleLineInput(
+                    ProductId: productId,
+                    ProductName: productName,
+                    Quantity: qty,
+                    UnitPrice: price,
+                    AvailableStock: stock,
+                    ProductFound: found,
+                    IsGeneric: isGeneric));
+            }
+
+            return AppServices.Sales.PrepareSale(new SalePreparationRequest(
+                lines,
+                ADescontar.Text,
+                FiltroDescuento.SelectedIndex == 0));
         }
 
         // 4. DetectaProducto ahora async Task (si necesitas buscar en BD async)
@@ -813,8 +874,15 @@ private void button10_Click(object sender, EventArgs e)
             NombreABuscar.Focus();
         }
 
-        private void button13_Click(object sender, EventArgs e)
+        private async void button13_Click(object sender, EventArgs e)
         {
+            var permitido = await PermissionAccess.EnsurePermissionAsync(
+                empleado,
+                AppPermissions.VentasDescuento,
+                this,
+                "aplicar descuentos");
+            if (!permitido) return;
+
             // Disminuye la cantidad del producto seleccionado
             var row = ListaDeCompras.CurrentRow;
             if (row == null) return;
@@ -833,8 +901,15 @@ private void button10_Click(object sender, EventArgs e)
             }
         }
 
-        private void button15_Click(object sender, EventArgs e)
+        private async void button15_Click(object sender, EventArgs e)
         {
+            var permitido = await PermissionAccess.EnsurePermissionAsync(
+                empleado,
+                AppPermissions.VentasDescuento,
+                this,
+                "modificar descuento/cantidad");
+            if (!permitido) return;
+
             // Aumenta la cantidad del producto seleccionado
             var row = ListaDeCompras.CurrentRow;
             if (row == null) return;
@@ -857,6 +932,18 @@ private void button10_Click(object sender, EventArgs e)
 
         private async void button18_Click(object sender, EventArgs e)
         {
+            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, "registrar venta"))
+                return;
+
+            var preparation = await BuildSalePreparationAsync();
+            if (!preparation.IsValid)
+            {
+                var details = string.Join(Environment.NewLine, preparation.Issues.Select(i => $"- {i.Message} ({i.Code})"));
+                MessageBox.Show($"No se puede registrar la venta:\n{details}", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            ApplyTotals(preparation.Totals);
+
             // Registrar productos en inventario si no está cargada
             if (!esCargada && facturaActiva != null)
                 await facturaActiva.RegistrarProductosAsync(+1);
@@ -869,6 +956,18 @@ private void button10_Click(object sender, EventArgs e)
 
         private async void Cobrar_Click(object sender, EventArgs e)
         {
+            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, "cobrar venta"))
+                return;
+
+            var preparation = await BuildSalePreparationAsync();
+            if (!preparation.IsValid)
+            {
+                var details = string.Join(Environment.NewLine, preparation.Issues.Select(i => $"- {i.Message} ({i.Code})"));
+                MessageBox.Show($"No se puede cobrar la venta:\n{details}", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            ApplyTotals(preparation.Totals);
+
             if (ValidarDireccionParaEnvio())
             {
                 MostrarAvisoDireccionFaltante();
