@@ -1,5 +1,5 @@
-﻿using Microsoft.VisualBasic;
-using SistemaFerreteriaV8.Clases;
+﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Infrastructure.Security;
 using System;
 using System.Windows.Forms;
 
@@ -36,10 +36,12 @@ namespace SistemaFerreteriaV8
             // Si se selecciona la columna especial (administrador)
             if (e.ColumnIndex == 3)
             {
-                var clave = Interaction.InputBox("Necesita la clave de un administrador para continuar");
-                var empleado = await Empleado.BuscarPorClaveAsync("contrasena", clave);
+                var clave = SecurityPrompt.PromptPassword(
+                    "Necesita la clave de un administrador para continuar.",
+                    "Autorización requerida");
+                var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(clave);
 
-                if (empleado != null && empleado.Puesto == "Administrador")
+                if (SecurityServices.AuthorizationService.IsAdmin(auth))
                 {
                     CambiarPrecioSeleccionado(e.RowIndex, e.ColumnIndex);
                 }
@@ -73,10 +75,12 @@ namespace SistemaFerreteriaV8
             int row = ListaPrecio.CurrentCell.RowIndex;
             if (col == 3)
             {
-                var clave = Interaction.InputBox("Necesita la clave de un administrador para continuar");
-                var empleado = await Empleado.BuscarPorClaveAsync("contrasena", clave);
+                var clave = SecurityPrompt.PromptPassword(
+                    "Necesita la clave de un administrador para continuar.",
+                    "Autorización requerida");
+                var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(clave);
 
-                if (empleado != null && empleado.Puesto == "Administrador")
+                if (SecurityServices.AuthorizationService.IsAdmin(auth))
                 {
                     CambiarPrecioSeleccionado(row, col);
                 }
