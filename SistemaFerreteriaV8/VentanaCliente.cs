@@ -93,7 +93,7 @@ namespace SistemaFerreteriaV8
             Id.Text = await nuevoCliente.GenerarNuevoIdAsync();
         }
 
-        private void Guardar_Click(object sender, EventArgs e)
+        private async void Guardar_Click(object sender, EventArgs e)
         {
             Cliente nuevoCliente = new Cliente();
 
@@ -103,16 +103,22 @@ namespace SistemaFerreteriaV8
             nuevoCliente.Cedula = Cedula.Text;  
             nuevoCliente.Telefono = Telefono.Text;
             nuevoCliente.Correo = Correo.Text;
-            nuevoCliente.LimiteCredito = double.Parse(LimiteCredito.Text);
-
-            if (new Cliente().BuscarAsync(Id.Text) == null)
+            if (!double.TryParse(LimiteCredito.Text, out var limiteCredito))
             {
-                nuevoCliente.CrearAsync();
+                MessageBox.Show("Ingrese un límite de crédito válido.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            nuevoCliente.LimiteCredito = limiteCredito;
+
+            var clienteExistente = await new Cliente().BuscarAsync(Id.Text);
+            if (clienteExistente == null)
+            {
+                await nuevoCliente.CrearAsync();
                 MessageBox.Show("Cliente creado correctamente!");
             }
             else
             {
-                nuevoCliente.EditarAsync();
+                await nuevoCliente.EditarAsync();
                 MessageBox.Show("Cliente actualizado correctamente!");
             }
 

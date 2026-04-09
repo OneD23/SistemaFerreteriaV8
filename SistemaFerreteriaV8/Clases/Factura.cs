@@ -161,13 +161,28 @@ namespace SistemaFerreteriaV8.Clases
         // DTO para proyecciones rápidas
         public class FacturaResumen
         {
+            [BsonElement("Id")]
             public int Id { get; set; }
+
+            [BsonElement("nombreCliente")]
             public string NombreCliente { get; set; }
+
+            [BsonElement("fecha")]
             public DateTime Fecha { get; set; }
+
+            [BsonElement("total")]
             public double Total { get; set; }
+
+            [BsonElement("eliminada")]
             public bool Eliminada { get; set; }
+
+            [BsonElement("metodoDePago")]
             public string MetodoDePago { get; set; }
+
+            [BsonElement("cotizacion")]
             public bool Cotizacion { get; set; }
+
+            [BsonElement("editada")]
             public bool Editada { get; set; }
         }
 
