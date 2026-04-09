@@ -41,21 +41,48 @@ namespace SistemaFerreteriaV8.Clases
                 .GetDatabase(new OneKeys().DatabaseName)
                 .GetCollection<Productos>("Productos");
 
-        public Productos()
+        static Productos()
         {
-            Id = GenerarId();
             CrearIndices();
         }
 
-        #region Índices
-        private void CrearIndices()
+        public Productos()
         {
-            _collection.Indexes.CreateOne(new CreateIndexModel<Productos>(
-                Builders<Productos>.IndexKeys.Ascending(p => p.Nombre)));
-            _collection.Indexes.CreateOne(new CreateIndexModel<Productos>(
-                Builders<Productos>.IndexKeys.Ascending(p => p.Categoria)));
-            _collection.Indexes.CreateOne(new CreateIndexModel<Productos>(
-                Builders<Productos>.IndexKeys.Ascending(p => p.Marca)));
+            Id = GenerarId();
+        }
+
+        #region Índices
+        private static void CrearIndices()
+        {
+            try
+            {
+                var existing = _collection.Indexes.List().ToList().Select(d => d["name"].AsString).ToHashSet();
+
+                if (!existing.Contains("idx_producto_nombre"))
+                {
+                    _collection.Indexes.CreateOne(new CreateIndexModel<Productos>(
+                        Builders<Productos>.IndexKeys.Ascending(p => p.Nombre),
+                        new CreateIndexOptions { Name = "idx_producto_nombre" }));
+                }
+
+                if (!existing.Contains("idx_producto_categoria"))
+                {
+                    _collection.Indexes.CreateOne(new CreateIndexModel<Productos>(
+                        Builders<Productos>.IndexKeys.Ascending(p => p.Categoria),
+                        new CreateIndexOptions { Name = "idx_producto_categoria" }));
+                }
+
+                if (!existing.Contains("idx_producto_marca"))
+                {
+                    _collection.Indexes.CreateOne(new CreateIndexModel<Productos>(
+                        Builders<Productos>.IndexKeys.Ascending(p => p.Marca),
+                        new CreateIndexOptions { Name = "idx_producto_marca" }));
+                }
+            }
+            catch (MongoException)
+            {
+                // Evita romper la app si el índice ya existe con otro nombre o hay conectividad intermitente.
+            }
         }
         #endregion
 
