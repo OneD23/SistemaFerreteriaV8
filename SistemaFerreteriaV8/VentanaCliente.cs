@@ -32,6 +32,7 @@ namespace SistemaFerreteriaV8
 
             foreach (var lbl in new[] { label5, label1, label2, label4, label3, label7, label6, label8 })
             {
+                lbl.AutoSize = false;
                 lbl.TextAlign = ContentAlignment.MiddleRight;
                 lbl.Location = new Point(xLabel, lbl.Location.Y);
                 lbl.Size = new Size(wLabel, 24);

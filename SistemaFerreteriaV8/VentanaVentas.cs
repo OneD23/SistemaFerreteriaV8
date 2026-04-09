@@ -44,6 +44,7 @@ namespace SistemaFerreteriaV8
 
             foreach (var lbl in new[] { label1, label3, label2 })
             {
+                lbl.AutoSize = false;
                 lbl.TextAlign = ContentAlignment.MiddleRight;
                 lbl.Location = new Point(xLabelInfo, lbl.Location.Y);
                 lbl.Size = new Size(wLabelInfo, 24);
@@ -60,6 +61,7 @@ namespace SistemaFerreteriaV8
 
             foreach (var lbl in new[] { label11, label12 })
             {
+                lbl.AutoSize = false;
                 lbl.TextAlign = ContentAlignment.MiddleRight;
                 lbl.Location = new Point(xLabelOpc, lbl.Location.Y);
                 lbl.Size = new Size(wLabelOpc, 24);
@@ -76,6 +78,7 @@ namespace SistemaFerreteriaV8
             int xValorTotales = 210;
             foreach (var lbl in new[] { label7, label8, label13, label9 })
             {
+                lbl.AutoSize = false;
                 lbl.TextAlign = ContentAlignment.MiddleRight;
                 lbl.Location = new Point(xLabelTotales, lbl.Location.Y);
                 lbl.Size = new Size(wLabelTotales, 24);
