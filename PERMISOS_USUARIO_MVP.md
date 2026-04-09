@@ -18,6 +18,8 @@ Se agregan overrides por usuario en `Empleado`:
 - `Empleado` ahora incluye `PermisosAllow` y `PermisosDeny`.
 - `AuthenticationService` y `PermissionAccess.BuildSession` incluyen estos overrides al construir `AuthResult`.
 - `AuthorizationService.HasPermission(...)` aplica la prioridad definida.
+- `IEmployeeRepository` incluye escritura de overrides (`SetUserPermissionOverridesAsync`).
+- `IUserPermissionService`/`UserPermissionService` permiten consultar snapshot efectivo y preparar futura UI administrativa.
 
 ## Estrategia de migración gradual
 1. Mantener matriz actual por rol para no romper operación.

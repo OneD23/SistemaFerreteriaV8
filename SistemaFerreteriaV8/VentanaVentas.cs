@@ -249,41 +249,9 @@ namespace SistemaFerreteriaV8
 
 
         // 1. RegistrarFactura ahora como async Task, usando métodos async y evitando async void.
-        public async Task RegistrarFacturaAsync(bool paga)
+        public async Task RegistrarFacturaAsync(bool paga, SalePreparationResult preparation)
         {
             if (facturaActiva == null) return;
-
-            // 1. Construir la lista de productos desde la DataGridView
-            var listaProducto = ListaDeCompras.Rows
-                .Cast<DataGridViewRow>()
-                .Where(row => row.Cells[0]?.Value != null)
-                .Select(row =>
-                {
-                    string nombre = row.Cells[0].Value.ToString();
-                    double cantidad = double.TryParse(row.Cells[4]?.Value?.ToString(), out var cant) ? cant : 0;
-                    double precio = double.TryParse(row.Cells[3]?.Value?.ToString(), out var prec) ? prec : 0;
-
-                    Productos producto;
-                    if (nombre == "Generico")
-                    {
-                        producto = new Productos
-                        {
-                            Nombre = "Generico",
-                            Precio = new List<double> { precio, precio, precio, precio }
-                        };
-                    }
-                    else
-                    {
-                        // Usamos la versión sync para no generar demasiada concurrencia en UI
-                        producto = new Productos().Buscar("nombre", nombre);
-                    }
-
-                    return producto != null
-                        ? new ListProduct { Producto = producto, Cantidad = cantidad, Precio = precio }
-                        : null;
-                })
-                .Where(lp => lp != null)
-                .ToList();
 
             // 2. Obtener caja activa de forma asíncrona
             var cajaActiva = await  Caja.BuscarPorClaveAsync("estado", "true");
@@ -315,24 +283,42 @@ namespace SistemaFerreteriaV8
 
             facturaActiva.Id = idFactura;
             NoFactura.Text = idFactura.ToString();
+
+            var draft = AppServices.Sales.BuildInvoiceDraft(
+                preparation,
+                new InvoiceDraftMetadata(
+                    InvoiceId: idFactura,
+                    CustomerId: IdCliente.Text,
+                    CustomerName: NombreCliente.Text,
+                    Rnc: IdCliente.Text,
+                    EmployeeId: empleado.Id.ToString(),
+                    CompanyId: cajaActiva?.Id ?? "Empresa no definida",
+                    InvoiceType: tipoFactura.Text,
+                    Description: descripcion.Text,
+                    Address: direccion.Text.Trim(),
+                    SendByDelivery: N.Checked,
+                    Paid: paga,
+                    CreatedAt: DateTime.Now));
+
+            var listProducts = await BuildPersistableListProductsAsync(draft.Lines);
+
             var factura = new Factura
             {
-                Id = idFactura,
-                //ObjectId = facturaActiva.ObjectId,
-                NombreCliente = NombreCliente.Text,
-                NombreEmpresa = cajaActiva?.Id ?? "Empresa no definida",
-                RNC = IdCliente.Text,
-                IdCliente = IdCliente.Text,
-                Fecha = DateTime.Now,
-                IdEmpleado = empleado.Id.ToString(),
-                Productos = listaProducto,
-                Total = totalActivo,
-                Descuentos = descuentoActivo,
-                Description = descripcion.Text,
-                Direccion = direccion.Text.Trim(),
-                Paga = paga,
-                Enviar = N.Checked,
-                TipoFactura = tipoFactura.Text
+                Id = draft.InvoiceId,
+                NombreCliente = draft.CustomerName,
+                NombreEmpresa = draft.CompanyId,
+                RNC = draft.Rnc,
+                IdCliente = draft.CustomerId,
+                Fecha = draft.CreatedAt,
+                IdEmpleado = draft.EmployeeId,
+                Productos = listProducts,
+                Total = draft.Total,
+                Descuentos = draft.Discount,
+                Description = draft.Description,
+                Direccion = draft.Address,
+                Paga = draft.Paid,
+                Enviar = draft.SendByDelivery,
+                TipoFactura = draft.InvoiceType
             };
 
             // 4. Verificar si existe y usar async
@@ -344,6 +330,41 @@ namespace SistemaFerreteriaV8
                 await factura.InsertarFacturaAsync();
 
             facturaActiva = factura;
+        }
+
+        private async Task<List<ListProduct>> BuildPersistableListProductsAsync(IReadOnlyCollection<InvoiceDraftLine> lines)
+        {
+            var result = new List<ListProduct>();
+
+            foreach (var line in lines)
+            {
+                Productos? product;
+                if (line.IsGeneric)
+                {
+                    product = new Productos
+                    {
+                        Nombre = "Generico",
+                        Precio = new List<double> { line.UnitPrice, line.UnitPrice, line.UnitPrice, line.UnitPrice }
+                    };
+                }
+                else
+                {
+                    product = !string.IsNullOrWhiteSpace(line.ProductId)
+                        ? await Productos.BuscarAsync(line.ProductId)
+                        : await Productos.BuscarPorClaveAsync("nombre", line.ProductName);
+                }
+
+                if (product == null) continue;
+
+                result.Add(new ListProduct
+                {
+                    Producto = product,
+                    Cantidad = line.Quantity,
+                    Precio = line.UnitPrice
+                });
+            }
+
+            return result;
         }
 
         // 2. AsignarTotales mantiene cálculos en UI thread
@@ -930,7 +951,23 @@ private void button10_Click(object sender, EventArgs e)
 
         #region Procesamiento de venta
 
-        private async void button18_Click(object sender, EventArgs e)
+        private async Task<SalePreparationResult?> ValidateAndPrepareSaleAsync(string actionLabel)
+        {
+            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, actionLabel))
+                return null;
+
+            var preparation = await BuildSalePreparationAsync();
+            if (!preparation.IsValid)
+            {
+                var details = string.Join(Environment.NewLine, preparation.Issues.Select(i => $"- {i.Message} ({i.Code})"));
+                MessageBox.Show($"No se puede continuar:\n{details}", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return null;
+            }
+            ApplyTotals(preparation.Totals);
+            return preparation;
+        }
+
+        private async Task<bool> ExecuteSalePersistenceAsync(bool paid, SalePreparationResult preparation)
         {
             if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, "registrar venta"))
                 return;
@@ -949,24 +986,23 @@ private void button10_Click(object sender, EventArgs e)
                 await facturaActiva.RegistrarProductosAsync(+1);
 
             // Registrar o actualizar la factura en BD
-            await RegistrarFacturaAsync(false);
+            await RegistrarFacturaAsync(paid, preparation);
+            return true;
+        }
 
+        private async void button18_Click(object sender, EventArgs e)
+        {
+            var preparation = await ValidateAndPrepareSaleAsync("registrar venta");
+            if (preparation == null) return;
+
+            await ExecuteSalePersistenceAsync(false, preparation);
             LimpiarTodo();
         }
 
         private async void Cobrar_Click(object sender, EventArgs e)
         {
-            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, "cobrar venta"))
-                return;
-
-            var preparation = await BuildSalePreparationAsync();
-            if (!preparation.IsValid)
-            {
-                var details = string.Join(Environment.NewLine, preparation.Issues.Select(i => $"- {i.Message} ({i.Code})"));
-                MessageBox.Show($"No se puede cobrar la venta:\n{details}", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            ApplyTotals(preparation.Totals);
+            var preparation = await ValidateAndPrepareSaleAsync("cobrar venta");
+            if (preparation == null) return;
 
             if (ValidarDireccionParaEnvio())
             {
@@ -974,8 +1010,7 @@ private void button10_Click(object sender, EventArgs e)
                 return;
             }
 
-            // Registra la factura como pagada
-            await RegistrarFacturaAsync(true);
+            await ExecuteSalePersistenceAsync(true, preparation);
 
             // Abre ventana de pago con cliente y factura actual
             var ventanaPagar = new VentanaPagar
@@ -1011,6 +1046,9 @@ private void button10_Click(object sender, EventArgs e)
         // Cobrar y registrar la factura; ahora async para await RegistrarFacturaAsync
         private async void button5_Click(object sender, EventArgs e)
         {
+            var preparation = await ValidateAndPrepareSaleAsync("generar factura");
+            if (preparation == null) return;
+
             Configuraciones confi = new Configuraciones().ObtenerPorId(1);
             if (confi != null)
             {
@@ -1028,8 +1066,7 @@ private void button10_Click(object sender, EventArgs e)
                 return;
             }
 
-            // Registrar o actualizar la factura en BD
-            await RegistrarFacturaAsync(true);
+            await ExecuteSalePersistenceAsync(true, preparation);
 
             // Restaurar UI
             label11.ForeColor = Color.White;
@@ -1231,8 +1268,11 @@ private void button10_Click(object sender, EventArgs e)
         /// </summary>
         public async Task CotizarAsync()
         {
+            var preparation = await ValidateAndPrepareSaleAsync("cotizar venta");
+            if (preparation == null) return;
+
             // Registra factura en BD sin marcarla pagada
-            await RegistrarFacturaAsync(false);
+            await ExecuteSalePersistenceAsync(false, preparation);
 
             // Reset UI
             label11.ForeColor = Color.White;
