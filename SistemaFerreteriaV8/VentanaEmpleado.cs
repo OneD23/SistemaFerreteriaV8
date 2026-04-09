@@ -21,6 +21,8 @@ namespace SistemaFerreteriaV8
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            AutoScroll = true;
+            MinimumSize = new Size(980, 700);
             InicializarControlSueldo();
             button1.Click += BuscarTodo_Click;
             ReestructurarInterfaz();
@@ -50,7 +52,7 @@ namespace SistemaFerreteriaV8
         {
             int margen = 12;
             int espacio = 12;
-            int formularioH = 440;
+            int formularioH = 500;
 
             groupBox1.Location = new Point(margen, margen);
             groupBox1.Size = new Size(430, formularioH);
@@ -70,9 +72,9 @@ namespace SistemaFerreteriaV8
             int wLabel = 120;
             int xInput = 150;
             int wInput = 250;
-            int y = 32;
-            int h = 30;
-            int gap = 38;
+            int y = 28;
+            int h = 28;
+            int gap = 34;
             label4.Text = "Dirección:";
             label6.Text = "Código:";
             button1.Text = "Buscar ID";
@@ -98,10 +100,10 @@ namespace SistemaFerreteriaV8
             lblSueldo.TextAlign = ContentAlignment.MiddleRight;
             lblSueldo.Location = new Point(xLabel, y);
             lblSueldo.Size = new Size(wLabel, h);
-            txtSueldo.Location = new Point(xInput, y + 4);
+            txtSueldo.Location = new Point(xInput, y + 2);
             txtSueldo.Size = new Size(wInput, 24);
 
-            int yBotones = groupBox1.Height - 96;
+            int yBotones = y + h + 24;
             int wBoton = 124;
             int hBoton = 36;
             int sepBoton = 10;

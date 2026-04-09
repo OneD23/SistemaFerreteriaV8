@@ -26,6 +26,8 @@ namespace SistemaFerreteriaV8
         public VentanaProductos()
         {
             InitializeComponent();
+            AutoScroll = true;
+            MinimumSize = new Size(1100, 700);
             AplicarTemaProfesional();
             OrganizarLayoutProfesional();
             Resize += (_, __) => OrganizarLayoutProfesional();
@@ -156,14 +158,14 @@ namespace SistemaFerreteriaV8
         private void OrganizarLayoutProfesional()
         {
             FormBorderStyle = FormBorderStyle.None;
-            if (ClientSize.Width < 1100 || ClientSize.Height < 700)
-                ClientSize = new Size(1284, 770);
+            int width = Math.Max(1100, ClientSize.Width);
+            int height = Math.Max(700, ClientSize.Height);
 
             groupBox1.Location = new Point(20, 20);
-            groupBox1.Size = new Size(370, 730);
+            groupBox1.Size = new Size(370, height - 40);
 
             groupBox2.Location = new Point(405, 20);
-            groupBox2.Size = new Size(Math.Max(780, ClientSize.Width - 425), 730);
+            groupBox2.Size = new Size(Math.Max(780, width - 425), height - 40);
 
             label8.Location = new Point(102, 30);
             label8.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
@@ -250,12 +252,13 @@ namespace SistemaFerreteriaV8
             button3.Size = new Size(132, 30);
 
             ListaProductos.Location = new Point(18, 110);
-            ListaProductos.Size = new Size(groupBox2.Width - 35, 455);
+            ListaProductos.Size = new Size(groupBox2.Width - 35, Math.Max(340, groupBox2.Height - 275));
 
-            Lugar.Location = new Point(350, 575);
-            button5.Location = new Point(165, 600);
-            button6.Location = new Point(380, 600);
-            button4.Location = new Point(575, 600);
+            int yPaginacion = ListaProductos.Bottom + 8;
+            Lugar.Location = new Point((groupBox2.Width / 2) - 45, yPaginacion);
+            button5.Location = new Point(Lugar.Left - 185, yPaginacion + 24);
+            button6.Location = new Point(Lugar.Left - 10, yPaginacion + 24);
+            button4.Location = new Point(Lugar.Left + 165, yPaginacion + 24);
 
             foreach (var boton in new[] { button4, button5, button6 })
             {

@@ -23,6 +23,8 @@ namespace SistemaFerreteriaV8
         public VentanaConfiguraciones()
         {
             InitializeComponent();
+            AutoScroll = true;
+            MinimumSize = new Size(1100, 720);
             InicializarSeccionTema();
             InicializarGridSecuencias();
             AplicarTemaVisualUniforme();

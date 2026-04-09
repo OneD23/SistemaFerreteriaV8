@@ -31,6 +31,7 @@ namespace SistemaFerreteriaV8
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            AutoScroll = true;
             ModernizarUI();
             Resize += (_, __) => ReorganizarLayout();
         }
