@@ -21,6 +21,7 @@ namespace SistemaFerreteriaV8
         public VentanaCierreCaja()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private async void VentanaCierreCaja_Load(object sender, EventArgs e)

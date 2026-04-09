@@ -20,6 +20,44 @@ namespace SistemaFerreteriaV8
         public VentanaCliente()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            AjustarAlineacionVisual();
+        }
+        private void AjustarAlineacionVisual()
+        {
+            int xLabel = 15;
+            int wLabel = 120;
+            int xInput = 142;
+            int inputWidth = 235;
+
+            foreach (var lbl in new[] { label5, label1, label2, label4, label3, label7, label6, label8 })
+            {
+                lbl.AutoSize = false;
+                lbl.TextAlign = ContentAlignment.MiddleRight;
+                lbl.Location = new Point(xLabel, lbl.Location.Y);
+                lbl.Size = new Size(wLabel, 24);
+            }
+
+            Id.Location = new Point(xInput, Id.Location.Y);
+            Nombre.Location = new Point(xInput, Nombre.Location.Y);
+            Cedula.Location = new Point(xInput, Cedula.Location.Y);
+            Direccion.Location = new Point(xInput, Direccion.Location.Y);
+            Telefono.Location = new Point(xInput, Telefono.Location.Y);
+            Correo.Location = new Point(xInput, Correo.Location.Y);
+            LimiteCredito.Location = new Point(xInput, LimiteCredito.Location.Y);
+            CreditoActivo2.Location = new Point(xInput, CreditoActivo2.Location.Y);
+
+            Id.Width = 140;
+            Nombre.Width = inputWidth;
+            Cedula.Width = inputWidth;
+            Direccion.Width = inputWidth;
+            Telefono.Width = inputWidth;
+            Correo.Width = inputWidth;
+            LimiteCredito.Width = inputWidth;
+            CreditoActivo2.Width = inputWidth;
+
+            button1.Location = new Point(xInput + 148, button1.Location.Y);
+            button1.Width = 90;
         }
 
         private async void VentanaCliente_Load(object sender, EventArgs e)
@@ -55,7 +93,7 @@ namespace SistemaFerreteriaV8
             Id.Text = await nuevoCliente.GenerarNuevoIdAsync();
         }
 
-        private void Guardar_Click(object sender, EventArgs e)
+        private async void Guardar_Click(object sender, EventArgs e)
         {
             Cliente nuevoCliente = new Cliente();
 
@@ -65,16 +103,22 @@ namespace SistemaFerreteriaV8
             nuevoCliente.Cedula = Cedula.Text;  
             nuevoCliente.Telefono = Telefono.Text;
             nuevoCliente.Correo = Correo.Text;
-            nuevoCliente.LimiteCredito = double.Parse(LimiteCredito.Text);
-
-            if (new Cliente().BuscarAsync(Id.Text) == null)
+            if (!double.TryParse(LimiteCredito.Text, out var limiteCredito))
             {
-                nuevoCliente.CrearAsync();
+                MessageBox.Show("Ingrese un límite de crédito válido.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            nuevoCliente.LimiteCredito = limiteCredito;
+
+            var clienteExistente = await new Cliente().BuscarAsync(Id.Text);
+            if (clienteExistente == null)
+            {
+                await nuevoCliente.CrearAsync();
                 MessageBox.Show("Cliente creado correctamente!");
             }
             else
             {
-                nuevoCliente.EditarAsync();
+                await nuevoCliente.EditarAsync();
                 MessageBox.Show("Cliente actualizado correctamente!");
             }
 
