@@ -137,7 +137,7 @@ namespace SistemaFerreteriaV8
             var data = await new Cliente().ListarAsync();
             GuardarCsv("clientes_todos.csv",
                 "Id,Nombre,Cedula,RNC,Telefono,Correo,LimiteCredito",
-                data.Select(c => $"{Esc(c.Id)},{Esc(c.Nombre)},{Esc(c.Cedula)},{Esc(c.Cedula)},{Esc(c.Telefono)},{Esc(c.Correo)},{c.LimiteCredito:F2}"));
+                data.Select(c => $"{Esc(c.Id)},{Esc(c.Nombre)},{Esc(c.Cedula)},{Esc(c.RNC)},{Esc(c.Telefono)},{Esc(c.Correo)},{c.LimiteCredito:F2}"));
         }
         private async Task ExportarEmpleadosAsync()
         {

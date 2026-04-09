@@ -25,6 +25,78 @@ namespace SistemaFerreteriaV8
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            ModernizarUI();
+            Resize += (_, __) => ReorganizarLayout();
+        }
+
+        private void ModernizarUI()
+        {
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+
+            foreach (var btn in new[] { Pagar, Limpiar, Cancelar })
+            {
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+                btn.Height = 44;
+            }
+
+            foreach (var ctl in new Control[] { TipoFactura, MetodoPago, subTotal, Descuento, Total, Efectivo, Devuelta })
+                ctl.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+
+            ReorganizarLayout();
+        }
+
+        private void ReorganizarLayout()
+        {
+            int panelWidth = Math.Min(520, ClientSize.Width - 40);
+            int xLabel = (ClientSize.Width - panelWidth) / 2;
+            int xInput = xLabel + 150;
+            int wInput = panelWidth - 160;
+            int y = 56;
+            int h = 30;
+            int gap = 40;
+
+            label1.Left = (ClientSize.Width - label1.Width) / 2;
+            label1.Top = 20;
+
+            ConfigCampo(label8, TipoFactura, xLabel, xInput, wInput, y, h);
+            y += gap;
+
+            label9.Location = new Point(xLabel, y + 2);
+            Imprimir.Location = new Point(xInput, y + 2);
+            y += gap;
+
+            ConfigCampo(label2, subTotal, xLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigCampo(label3, Descuento, xLabel, xInput, wInput, y, h);
+            y += gap;
+            Total.Location = new Point(xInput, y);
+            Total.Size = new Size(wInput, h);
+            y += gap;
+            ConfigCampo(label4, MetodoPago, xLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigCampo(label5, Efectivo, xLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigCampo(label6, Devuelta, xLabel, xInput, wInput, y, h);
+
+            int yBtns = ClientSize.Height - 72;
+            int btnW = 130;
+            int space = 18;
+            int startX = (ClientSize.Width - (btnW * 3 + space * 2)) / 2;
+            Pagar.SetBounds(startX, yBtns, btnW, 44);
+            Limpiar.SetBounds(startX + btnW + space, yBtns, btnW, 44);
+            Cancelar.SetBounds(startX + (btnW + space) * 2, yBtns, btnW, 44);
+        }
+
+        private static void ConfigCampo(Control label, Control input, int xLabel, int xInput, int wInput, int y, int h)
+        {
+            label.AutoSize = false;
+            label.TextAlign = ContentAlignment.MiddleRight;
+            label.Location = new Point(xLabel, y);
+            label.Size = new Size(140, h);
+            input.Location = new Point(xInput, y);
+            input.Size = new Size(wInput, h);
         }
 
         private void VentanaPagar_Load(object sender, EventArgs e)

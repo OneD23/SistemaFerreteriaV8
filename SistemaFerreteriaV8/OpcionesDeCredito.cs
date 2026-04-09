@@ -14,6 +14,72 @@ namespace SistemaFerreteriaV8
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            ModernizarUI();
+            Resize += (_, __) => ReorganizarLayout();
+        }
+
+        private void ModernizarUI()
+        {
+            ListaCreditos.BorderStyle = BorderStyle.None;
+            ListaCreditos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            ListaCreditos.RowHeadersVisible = false;
+            ListaCreditos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            ListaCreditos.MultiSelect = false;
+            ListaCreditos.EnableHeadersVisualStyles = false;
+            ListaCreditos.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(24, 36, 60);
+            ListaCreditos.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            ListaCreditos.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(64, 85, 122);
+            ListaCreditos.DefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            ListaCreditos.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(46, 74, 125);
+            ListaCreditos.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
+
+            foreach (var btn in new[] { Editar, PagarTotal, ImprimirTotal, Cancelar })
+            {
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+                btn.Height = 44;
+            }
+            Editar.Text = "Abonar";
+            PagarTotal.Text = "Pagar total";
+            ImprimirTotal.Text = "Imprimir historial";
+
+            ReorganizarLayout();
+        }
+
+        private void ReorganizarLayout()
+        {
+            int margen = 16;
+            label1.Left = (ClientSize.Width - label1.Width) / 2;
+            label1.Top = 24;
+
+            int baseX = 26;
+            int yInfo = 86;
+            label2.Location = new System.Drawing.Point(baseX, yInfo);
+            ID.Location = new System.Drawing.Point(baseX + 90, yInfo);
+            label3.Location = new System.Drawing.Point(baseX, yInfo + 36);
+            Nombre.Location = new System.Drawing.Point(baseX + 90, yInfo + 36);
+            label4.Location = new System.Drawing.Point(baseX, yInfo + 72);
+            LimiteCredito.Location = new System.Drawing.Point(baseX + 160, yInfo + 72);
+            label5.Location = new System.Drawing.Point(baseX, yInfo + 108);
+            CreditoUtilizado.Location = new System.Drawing.Point(baseX + 160, yInfo + 108);
+            label6.Location = new System.Drawing.Point(baseX, yInfo + 144);
+            CreditoDisponible.Location = new System.Drawing.Point(baseX + 160, yInfo + 144);
+
+            label8.Left = (ClientSize.Width - label8.Width) / 2;
+            label8.Top = yInfo + 180;
+
+            ListaCreditos.Location = new System.Drawing.Point(margen, label8.Bottom + 10);
+            ListaCreditos.Size = new System.Drawing.Size(ClientSize.Width - (margen * 2), ClientSize.Height - 320);
+
+            int yBotones = ClientSize.Height - 66;
+            int spacing = 14;
+            int buttonWidth = (ListaCreditos.Width - (spacing * 3)) / 4;
+            int x = ListaCreditos.Left;
+            foreach (var btn in new[] { Editar, PagarTotal, ImprimirTotal, Cancelar })
+            {
+                btn.SetBounds(x, yBotones, buttonWidth, 44);
+                x += buttonWidth + spacing;
+            }
         }
 
         private async void OpcionesDeCredito_Load(object sender, EventArgs e)

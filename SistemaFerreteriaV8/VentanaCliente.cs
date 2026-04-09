@@ -22,13 +22,23 @@ namespace SistemaFerreteriaV8
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
             AjustarAlineacionVisual();
+            Resize += (_, __) => AjustarAlineacionVisual();
         }
         private void AjustarAlineacionVisual()
         {
-            int xLabel = 15;
+            int margen = 12;
+            int espacio = 12;
+            int altoFormulario = 380;
+
+            groupBox1.Location = new Point(margen, margen);
+            groupBox1.Size = new Size(430, altoFormulario);
+            groupBox2.Location = new Point(groupBox1.Right + espacio, margen);
+            groupBox2.Size = new Size(Math.Max(450, ClientSize.Width - groupBox1.Width - margen * 2 - espacio), altoFormulario);
+
+            int xLabel = 16;
             int wLabel = 120;
-            int xInput = 142;
-            int inputWidth = 235;
+            int xInput = 145;
+            int inputWidth = 240;
 
             foreach (var lbl in new[] { label5, label1, label2, label4, label3, label7, label6, label8 })
             {
@@ -56,8 +66,33 @@ namespace SistemaFerreteriaV8
             LimiteCredito.Width = inputWidth;
             CreditoActivo2.Width = inputWidth;
 
-            button1.Location = new Point(xInput + 148, button1.Location.Y);
+            button1.Location = new Point(xInput + inputWidth - 90, button1.Location.Y);
             button1.Width = 90;
+
+            ListaDeClientes.Location = new Point(10, 22);
+            ListaDeClientes.Size = new Size(groupBox2.Width - 20, groupBox2.Height - 32);
+            ListaDeClientes.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            ListaDeClientes.RowHeadersVisible = false;
+            ListaDeClientes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            ListaDeClientes.MultiSelect = false;
+
+            int yBotones = groupBox1.Height - 106;
+            int wBtn = 92;
+            int hBtn = 36;
+            int sep = 10;
+            Nuevo.SetBounds(28, yBotones, wBtn, hBtn);
+            Editar.SetBounds(28 + wBtn + sep, yBotones, wBtn, hBtn);
+            Guardar.SetBounds(28 + ((wBtn + sep) * 2), yBotones, wBtn, hBtn);
+            button3.SetBounds(28, yBotones + hBtn + 10, wBtn, hBtn);
+            BuscarTodo.SetBounds(28 + wBtn + sep, yBotones + hBtn + 10, wBtn, hBtn);
+            Cancelar.SetBounds(28 + ((wBtn + sep) * 2), yBotones + hBtn + 10, wBtn, hBtn);
+
+            button2.SetBounds(margen + 8, groupBox1.Bottom + espacio + 8, 170, 42);
+            foreach (var btn in new[] { button1, Nuevo, Editar, Guardar, button3, BuscarTodo, Cancelar, button2 })
+            {
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+            }
         }
 
         private async void VentanaCliente_Load(object sender, EventArgs e)

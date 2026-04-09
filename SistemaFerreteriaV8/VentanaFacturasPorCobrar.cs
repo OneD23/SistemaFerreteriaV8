@@ -16,6 +16,61 @@ namespace SistemaFerreteriaV8
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            ModernizarUI();
+            Resize += (_, __) => ReorganizarLayout();
+        }
+
+        private void ModernizarUI()
+        {
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+
+            ListaFacturas.BorderStyle = BorderStyle.None;
+            ListaFacturas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            ListaFacturas.RowHeadersVisible = false;
+            ListaFacturas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            ListaFacturas.MultiSelect = false;
+            ListaFacturas.EnableHeadersVisualStyles = false;
+            ListaFacturas.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(24, 36, 60);
+            ListaFacturas.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            ListaFacturas.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(64, 85, 122);
+            ListaFacturas.DefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            ListaFacturas.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(46, 74, 125);
+            ListaFacturas.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
+
+            foreach (var btn in new[] { button1, button2, button3, button4 })
+            {
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+                btn.Height = 42;
+            }
+
+            button1.Text = "Abrir factura";
+            button3.Text = "Buscar por ID";
+            button4.Text = "Reimprimir";
+
+            ReorganizarLayout();
+        }
+
+        private void ReorganizarLayout()
+        {
+            const int margen = 18;
+            label1.Left = (ClientSize.Width - label1.Width) / 2;
+            label1.Top = 22;
+
+            ListaFacturas.Location = new System.Drawing.Point(margen, label1.Bottom + 16);
+            ListaFacturas.Size = new System.Drawing.Size(ClientSize.Width - margen * 2, ClientSize.Height - 170);
+
+            int yBotones = ListaFacturas.Bottom + 14;
+            int espacio = 12;
+            int ancho = (ListaFacturas.Width - (espacio * 3)) / 4;
+            int x = ListaFacturas.Left;
+
+            foreach (var btn in new[] { button1, button3, button4, button2 })
+            {
+                btn.SetBounds(x, yBotones, ancho, 42);
+                x += ancho + espacio;
+            }
         }
 
         private async void VentanaFacturasPorCobrar_Load(object sender, EventArgs e)
