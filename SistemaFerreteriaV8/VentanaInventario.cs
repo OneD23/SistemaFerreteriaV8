@@ -17,6 +17,7 @@ namespace SistemaFerreteriaV8
         public VentanaInventario()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private async void VentanaInventario_Load(object sender, EventArgs e)
