@@ -969,6 +969,18 @@ private void button10_Click(object sender, EventArgs e)
 
         private async Task<bool> ExecuteSalePersistenceAsync(bool paid, SalePreparationResult preparation)
         {
+            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, "registrar venta"))
+                return;
+
+            var preparation = await BuildSalePreparationAsync();
+            if (!preparation.IsValid)
+            {
+                var details = string.Join(Environment.NewLine, preparation.Issues.Select(i => $"- {i.Message} ({i.Code})"));
+                MessageBox.Show($"No se puede registrar la venta:\n{details}", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            ApplyTotals(preparation.Totals);
+
             // Registrar productos en inventario si no está cargada
             if (!esCargada && facturaActiva != null)
                 await facturaActiva.RegistrarProductosAsync(+1);
