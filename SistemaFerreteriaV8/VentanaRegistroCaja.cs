@@ -1,4 +1,5 @@
 ﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.AppCore.Abstractions;
 using SistemaFerreteriaV8.Domain.Security;
 using SistemaFerreteriaV8.Infrastructure.Security;
 using SistemaFerreteriaV8.Infrastructure.Services;

@@ -17,6 +17,7 @@ using static Org.BouncyCastle.Math.EC.ECCurve;
 using SistemaFerreteriaV8.Infrastructure.Security;
 using SistemaFerreteriaV8.Infrastructure.Services;
 using SistemaFerreteriaV8.AppCore.Sales;
+using SistemaFerreteriaV8.AppCore.Abstractions;
 
 namespace SistemaFerreteriaV8
 {
