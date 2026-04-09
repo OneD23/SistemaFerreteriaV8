@@ -13,9 +13,13 @@ namespace SistemaFerreteriaV8
     {
         private readonly Chart chartTendencia = new Chart();
         private readonly TextBox txtGastoMensual = new TextBox();
+        private readonly TextBox txtGastoDiario = new TextBox();
+        private readonly TextBox txtDescripcionGasto = new TextBox();
         private readonly Label lblEstado = new Label();
+        private readonly Label lblResumen = new Label();
         private readonly Button btnGuardar = new Button();
         private readonly Button btnActualizar = new Button();
+        private readonly Button btnRegistrarGasto = new Button();
         private bool cargando = false;
 
         public VentanaTendenciaGastos()
@@ -35,7 +39,7 @@ namespace SistemaFerreteriaV8
 
         private void ConstruirUI()
         {
-            var panelTop = new Panel { Dock = DockStyle.Top, Height = 52 };
+            var panelTop = new Panel { Dock = DockStyle.Top, Height = 92 };
             Controls.Add(panelTop);
 
             var lblGasto = new Label
@@ -70,6 +74,37 @@ namespace SistemaFerreteriaV8
             lblEstado.AutoSize = true;
             lblEstado.Location = new Point(580, 18);
             panelTop.Controls.Add(lblEstado);
+
+            var lblGastoDiario = new Label
+            {
+                Text = "Gasto diario:",
+                ForeColor = Color.White,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleRight,
+                Width = 130,
+                Height = 28,
+                Location = new Point(8, 52)
+            };
+            panelTop.Controls.Add(lblGastoDiario);
+
+            txtGastoDiario.Location = new Point(145, 54);
+            txtGastoDiario.Size = new Size(150, 28);
+            panelTop.Controls.Add(txtGastoDiario);
+
+            txtDescripcionGasto.Location = new Point(305, 54);
+            txtDescripcionGasto.Size = new Size(257, 28);
+            panelTop.Controls.Add(txtDescripcionGasto);
+
+            btnRegistrarGasto.Text = "Registrar gasto";
+            btnRegistrarGasto.Location = new Point(570, 52);
+            btnRegistrarGasto.Size = new Size(120, 30);
+            btnRegistrarGasto.Click += async (_, __) => await RegistrarGastoDiarioAsync();
+            panelTop.Controls.Add(btnRegistrarGasto);
+
+            lblResumen.ForeColor = Color.LightGreen;
+            lblResumen.AutoSize = true;
+            lblResumen.Location = new Point(700, 58);
+            panelTop.Controls.Add(lblResumen);
 
             chartTendencia.Dock = DockStyle.Fill;
             chartTendencia.BackColor = Color.FromArgb(36, 52, 77);
@@ -112,12 +147,40 @@ namespace SistemaFerreteriaV8
             await CargarTendenciaAsync();
         }
 
+        private async Task RegistrarGastoDiarioAsync()
+        {
+            if (!double.TryParse(txtGastoDiario.Text, out var monto) || monto <= 0)
+            {
+                MessageBox.Show("Ingrese un monto de gasto diario válido.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtDescripcionGasto.Text))
+            {
+                MessageBox.Show("Ingrese una descripción del gasto.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var gasto = new GastoDiario
+            {
+                Fecha = DateTime.Now,
+                Monto = monto,
+                Descripcion = txtDescripcionGasto.Text.Trim()
+            };
+
+            await gasto.CrearAsync();
+            txtGastoDiario.Clear();
+            txtDescripcionGasto.Clear();
+            await CargarTendenciaAsync();
+        }
+
         private async Task CargarTendenciaAsync()
         {
             if (cargando) return;
             cargando = true;
             btnActualizar.Enabled = false;
             btnGuardar.Enabled = false;
+            btnRegistrarGasto.Enabled = false;
             lblEstado.Text = "Cargando tendencia...";
             lblEstado.ForeColor = Color.Gainsboro;
 
@@ -142,6 +205,11 @@ namespace SistemaFerreteriaV8
             int diaActual = DateTime.Now.Day;
             var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var finMes = inicioMes.AddMonths(1).AddTicks(-1);
+            var empleados = await Empleado.ListarAsync();
+            var gastosDiarios = await GastoDiario.ListarPorRangoAsync(inicioMes, finMes);
+            var totalNomina = empleados.Sum(e => e.SueldoMensual);
+            var totalGastosDiarios = gastosDiarios.Sum(gd => gd.Monto);
+            var gastoTotalMes = gastoMensual + totalNomina + totalGastosDiarios;
 
             var facturasMes = (await Factura.ListarFacturasPorFechaAsync(inicioMes, finMes))
                 .Where(f => !f.Eliminada)
@@ -157,9 +225,9 @@ namespace SistemaFerreteriaV8
                     .Sum(f => f.Total);
 
                 serieVentas.Points.AddXY(dia, acumulado);
-                var puntoGasto = serieGasto.Points.AddXY(dia, gastoMensual);
+                var puntoGasto = serieGasto.Points.AddXY(dia, gastoTotalMes);
 
-                if (cruceDia == -1 && gastoMensual > 0 && acumulado >= gastoMensual)
+                if (cruceDia == -1 && gastoTotalMes > 0 && acumulado >= gastoTotalMes)
                 {
                     cruceDia = dia;
                     serieGasto.Points[puntoGasto].MarkerStyle = MarkerStyle.Cross;
@@ -174,6 +242,9 @@ namespace SistemaFerreteriaV8
 
             chartTendencia.Series.Add(serieVentas);
             chartTendencia.Series.Add(serieGasto);
+            var gananciaNeta = acumulado - gastoTotalMes;
+            lblResumen.Text = $"Ventas: {acumulado:C2} | Gastos: {gastoTotalMes:C2} (Nómina: {totalNomina:C2}, Diario: {totalGastosDiarios:C2}) | Ganancia: {gananciaNeta:C2}";
+            lblResumen.ForeColor = gananciaNeta >= 0 ? Color.LightGreen : Color.OrangeRed;
 
             if (cruceDia != -1)
             {
@@ -194,6 +265,7 @@ namespace SistemaFerreteriaV8
 
             btnActualizar.Enabled = true;
             btnGuardar.Enabled = true;
+            btnRegistrarGasto.Enabled = true;
             cargando = false;
         }
     }

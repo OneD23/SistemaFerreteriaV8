@@ -15,16 +15,38 @@ namespace SistemaFerreteriaV8
     public partial class VentanaEmpleado : Form
     {
         Empleado EmpleadoActivo { set; get; }
+        private readonly TextBox txtSueldo = new TextBox();
+        private readonly Label lblSueldo = new Label();
         public VentanaEmpleado()
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            InicializarControlSueldo();
+        }
+
+        private void InicializarControlSueldo()
+        {
+            lblSueldo.AutoSize = true;
+            lblSueldo.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Regular, GraphicsUnit.Point, ((byte)(0)));
+            lblSueldo.ForeColor = Color.White;
+            lblSueldo.Location = new Point(12, 297);
+            lblSueldo.Name = "lblSueldo";
+            lblSueldo.Size = new Size(123, 20);
+            lblSueldo.Text = "Sueldo mensual:";
+
+            txtSueldo.Enabled = false;
+            txtSueldo.Location = new Point(142, 299);
+            txtSueldo.Name = "txtSueldo";
+            txtSueldo.Size = new Size(186, 20);
+
+            groupBox1.Controls.Add(lblSueldo);
+            groupBox1.Controls.Add(txtSueldo);
         }
 
         private void Nuevo_Click(object sender, EventArgs e)
         {
 
-            Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Codigo.Enabled = Puesto.Enabled = Telefono.Enabled = true;
+            Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Codigo.Enabled = Puesto.Enabled = Telefono.Enabled = txtSueldo.Enabled = true;
             Empleado nuevoCliente = new Empleado();
             Id.Text = nuevoCliente.Id.ToString();
         }
@@ -33,7 +55,7 @@ namespace SistemaFerreteriaV8
         {
 
 
-            Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Codigo.Enabled= Puesto.Enabled = Telefono.Enabled = true;
+            Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Codigo.Enabled= Puesto.Enabled = Telefono.Enabled = txtSueldo.Enabled = true;
         }
 
         private async void Guardar_Click(object sender, EventArgs e)
@@ -48,6 +70,7 @@ namespace SistemaFerreteriaV8
             nuevoEmpleado.Telefono = Telefono.Text;
             nuevoEmpleado.Puesto = Puesto.Text;
             nuevoEmpleado.Contrasena =Codigo.Text;
+            nuevoEmpleado.SueldoMensual = double.TryParse(txtSueldo.Text, out var sueldo) ? sueldo : 0;
 
             
 
@@ -79,11 +102,12 @@ namespace SistemaFerreteriaV8
                 Telefono.Text = nuevoCliente.Telefono;
                 Puesto.Text = nuevoCliente.Puesto;
                 Codigo.Text = nuevoCliente.Contrasena;
+                txtSueldo.Text = nuevoCliente.SueldoMensual.ToString("0.##");
 
                 EmpleadoActivo = nuevoCliente;
             }
 
-            Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Puesto.Enabled = Codigo.Enabled = Telefono.Enabled = false;
+            Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Puesto.Enabled = Codigo.Enabled = Telefono.Enabled = txtSueldo.Enabled = false;
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -91,13 +115,13 @@ namespace SistemaFerreteriaV8
             if(MessageBox.Show("Estas seguro que quieres eliminar el empleado llamado: " + EmpleadoActivo.Nombre, "Aviso!", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 EmpleadoActivo.EliminarAsync();
-                Id.Text = Nombre.Text = Cedula.Text = Direccion.Text = Puesto.Text = Codigo.Text = Telefono.Text = " ";
+                Id.Text = Nombre.Text = Cedula.Text = Direccion.Text = Puesto.Text = Codigo.Text = Telefono.Text = txtSueldo.Text = " ";
             }
         }
 
         private void Cancelar_Click(object sender, EventArgs e)
         {
-            Id.Text = Nombre.Text = Cedula.Text = Direccion.Text = Puesto.Text = Codigo.Text = Telefono.Text = " ";
+            Id.Text = Nombre.Text = Cedula.Text = Direccion.Text = Puesto.Text = Codigo.Text = Telefono.Text = txtSueldo.Text = " ";
 
         }
 
@@ -105,13 +129,12 @@ namespace SistemaFerreteriaV8
         {
 
             ListaDeEmpleado.DefaultCellStyle.ForeColor = Color.Black;
+            ListaDeEmpleado.Columns[6].HeaderText = "Sueldo";
             List<Empleado> clientes =  await Empleado.ListarAsync();
 
             foreach (Empleado cliente in clientes)
             {
-                double totaldeCLiente = 0;
-
-                ListaDeEmpleado.Rows.Add(cliente.Id, cliente.Nombre, cliente.Cedula, cliente.Direccion, cliente.Correo, cliente.Telefono, totaldeCLiente);
+                ListaDeEmpleado.Rows.Add(cliente.Id, cliente.Nombre, cliente.Cedula, cliente.Direccion, cliente.Correo, cliente.Telefono, cliente.SueldoMensual.ToString("C2"));
             }
         }
 
@@ -146,9 +169,10 @@ namespace SistemaFerreteriaV8
                 Cedula.Text = nuevoEmpleado.Cedula;
                 Telefono.Text = nuevoEmpleado.Telefono;
                 Puesto.Text = nuevoEmpleado.Puesto;
+                txtSueldo.Text = nuevoEmpleado.SueldoMensual.ToString("0.##");
 
                 // Deshabilitar campos de entrada
-                Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Puesto.Enabled = Telefono.Enabled = false;
+                Id.Enabled = Nombre.Enabled = Cedula.Enabled = Direccion.Enabled = Puesto.Enabled = Telefono.Enabled = txtSueldo.Enabled = false;
 
                 // Actualizar el empleado activo
                 EmpleadoActivo = nuevoEmpleado;

@@ -18,16 +18,14 @@ namespace SistemaFerreteriaV8
         Form formActivado = null;
         public List<Productos> listaProductos {  get; set; }
         private Button btnTendencia;
-        private Button btnExportFacturas;
-        private Button btnExportProductos;
-        private Button btnExportClientes;
-        private Button btnExportEmpleados;
+        private Button btnExportacionDatos;
+        private readonly ContextMenuStrip menuExportacion = new ContextMenuStrip();
         public Contabilidad()
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
             InicializarBotonTendencia();
-            InicializarBotonesExportacion();
+            InicializarBotonExportacionDatos();
         }
         private void InicializarBotonTendencia()
         {
@@ -35,8 +33,8 @@ namespace SistemaFerreteriaV8
             {
                 Text = "Tendencia / Gastos",
                 Size = new Size(180, 42),
-                Location = new Point(620, 12),
-                BackColor = Color.FromArgb(255, 137, 0),
+                Location = new Point(588, 12),
+                BackColor = Color.FromArgb(211, 47, 47),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
@@ -44,28 +42,50 @@ namespace SistemaFerreteriaV8
             btnTendencia.Click += (_, __) => AbrirFormulario(new VentanaTendenciaGastos());
             panel1.Controls.Add(btnTendencia);
         }
-        private void InicializarBotonesExportacion()
+        private void InicializarBotonExportacionDatos()
         {
-            btnExportFacturas = CrearBotonTop("Exportar Facturas", 12, async () => await ExportarFacturasAsync());
-            btnExportProductos = CrearBotonTop("Exportar Productos", 200, async () => await ExportarProductosAsync());
-            btnExportClientes = CrearBotonTop("Exportar Clientes", 388, async () => await ExportarClientesAsync());
-            btnExportEmpleados = CrearBotonTop("Exportar Empleados", 808, async () => await ExportarEmpleadosAsync());
-        }
-        private Button CrearBotonTop(string texto, int x, Func<Task> accion)
-        {
-            var btn = new Button
+            btnExportacionDatos = new Button
             {
-                Text = texto,
+                Text = "Exportación de datos",
                 Size = new Size(180, 42),
-                Location = new Point(x, 12),
+                Location = new Point(776, 12),
                 BackColor = Color.FromArgb(46, 74, 125),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
-            btn.FlatAppearance.BorderSize = 0;
-            btn.Click += async (_, __) => await accion();
-            panel1.Controls.Add(btn);
-            return btn;
+
+            btnExportacionDatos.FlatAppearance.BorderSize = 0;
+            btnExportacionDatos.Click += (_, __) =>
+            {
+                menuExportacion.Show(btnExportacionDatos, new Point(0, btnExportacionDatos.Height));
+            };
+
+            ConfigurarMenuExportacion();
+            panel1.Controls.Add(btnExportacionDatos);
+        }
+
+        private void ConfigurarMenuExportacion()
+        {
+            menuExportacion.ShowImageMargin = false;
+            menuExportacion.Items.Clear();
+
+            menuExportacion.Items.Add(CrearOpcionExportacion("Exportar facturas", ExportarFacturasAsync));
+            menuExportacion.Items.Add(CrearOpcionExportacion("Exportar productos", ExportarProductosAsync));
+            menuExportacion.Items.Add(CrearOpcionExportacion("Exportar clientes", ExportarClientesAsync));
+            menuExportacion.Items.Add(CrearOpcionExportacion("Exportar empleados", ExportarEmpleadosAsync));
+        }
+
+        private ToolStripMenuItem CrearOpcionExportacion(string texto, Func<Task> accion)
+        {
+            var item = new ToolStripMenuItem
+            {
+                Text = texto,
+                BackColor = Color.FromArgb(46, 74, 125),
+                ForeColor = Color.White
+            };
+
+            item.Click += async (_, __) => await accion();
+            return item;
         }
         private async Task ExportarFacturasAsync()
         {
@@ -86,7 +106,7 @@ namespace SistemaFerreteriaV8
             var data = await new Cliente().ListarAsync();
             GuardarCsv("clientes_todos.csv",
                 "Id,Nombre,Cedula,RNC,Telefono,Correo,LimiteCredito",
-                data.Select(c => $"{Esc(c.Id)},{Esc(c.Nombre)},{Esc(c.Cedula)},{Esc(c.Cedula)},{Esc(c.Telefono)},{Esc(c.Correo)},{c.LimiteCredito:F2}"));
+                data.Select(c => $"{Esc(c.Id)},{Esc(c.Nombre)},{Esc(c.Cedula)},{Esc(c.RNC)},{Esc(c.Telefono)},{Esc(c.Correo)},{c.LimiteCredito:F2}"));
         }
         private async Task ExportarEmpleadosAsync()
         {
