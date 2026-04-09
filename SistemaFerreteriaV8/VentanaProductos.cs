@@ -246,10 +246,6 @@ namespace SistemaFerreteriaV8
             comboBox1.Size = new Size(140, 28);
             textBox1.Location = new Point(165, 74);
             textBox1.Size = new Size(250, 28);
-            button1.Location = new Point(groupBox2.Width - 295, 74);
-            button1.Size = new Size(132, 30);
-            button3.Location = new Point(groupBox2.Width - 156, 74);
-            button3.Size = new Size(132, 30);
 
             ListaProductos.Location = new Point(18, 110);
             ListaProductos.Size = new Size(groupBox2.Width - 35, Math.Max(340, groupBox2.Height - 275));
