@@ -380,10 +380,10 @@ namespace SistemaFerreteriaV8
 
                 if (!isGeneric)
                 {
-                    var product = await Productos.BuscarPorClaveAsync("nombre", productName);
-                    found = product != null;
-                    stock = product?.Cantidad ?? 0;
-                    productId = product?.Id ?? string.Empty;
+                    var lookup = await AppServices.Product.FindByNameAsync(productName);
+                    found = lookup.Found && lookup.Product != null;
+                    stock = lookup.Product?.Cantidad ?? 0;
+                    productId = lookup.Product?.Id ?? string.Empty;
                 }
 
                 lines.Add(new SaleLineInput(
@@ -418,8 +418,8 @@ namespace SistemaFerreteriaV8
             }
             else
             {
-                // Si tu método BuscarAsync existe, úsalo; si no, déjalo sync.
-                producto = await  Productos.BuscarAsync(codigo);
+                var lookup = await AppServices.Product.FindByIdAsync(codigo);
+                producto = lookup.Product;
             }
 
             if (producto != null)
