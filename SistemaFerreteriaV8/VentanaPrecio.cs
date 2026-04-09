@@ -60,7 +60,7 @@ namespace SistemaFerreteriaV8
         // Método para cambiar el precio de manera segura
         private void CambiarPrecioSeleccionado(int rowIndex, int columnIndex)
         {
-            var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+            var frm = WinFormsApp.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
             if (frm != null)
             {
                 string valorCelda = frm.obtenerValorDeCelda(ListaPrecio.Rows[rowIndex].Cells[columnIndex]);

@@ -24,7 +24,7 @@ Fuente de verdad: `Domain/Security/AppPermissions.cs`.
 - **Inventario**: `inventario.editar`, `inventario.ajustar_stock`, `reportes.ver`.
 - **Contabilidad**: `reportes.ver`, `ventas.cancelar`, `caja.cerrar`.
 
-Fuente de verdad: `Application/Security/AuthorizationService.cs`.
+Fuente de verdad: `AppCore/Security/AuthorizationService.cs`.
 
 ## Dónde se aplica actualmente
 

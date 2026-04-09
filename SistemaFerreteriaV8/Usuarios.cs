@@ -30,8 +30,8 @@ namespace SistemaFerreteriaV8
                     "editar clientes"))
                 return;
 
-            Form1 frm = (Form1)Application.OpenForms["Form1"];
-            if (Application.OpenForms.OfType<Form1>().Any())
+            Form1 frm = (Form1)WinFormsApp.OpenForms["Form1"];
+            if (WinFormsApp.OpenForms.OfType<Form1>().Any())
             {
                 frm.AbrirFormulario(new VentanaCliente());
             }
@@ -48,8 +48,8 @@ namespace SistemaFerreteriaV8
                     "gestionar empleados"))
                 return;
 
-            Form1 frm = (Form1)Application.OpenForms["Form1"];
-            if (Application.OpenForms.OfType<Form1>().Any())
+            Form1 frm = (Form1)WinFormsApp.OpenForms["Form1"];
+            if (WinFormsApp.OpenForms.OfType<Form1>().Any())
             {
                 frm.AbrirFormulario(new VentanaEmpleado());
             }

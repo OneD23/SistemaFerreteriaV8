@@ -1,1 +1,1 @@
-global using Application = System.Windows.Forms.Application;
+global using WinFormsApp = System.Windows.Forms.Application;

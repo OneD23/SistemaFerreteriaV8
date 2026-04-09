@@ -8,7 +8,7 @@ public static class PermissionAccess
 {
     public static Empleado? GetActiveEmployee()
     {
-        var main = Application.OpenForms["Form1"] as Form1;
+        var main = WinFormsApp.OpenForms["Form1"] as Form1;
         return main?.EmpleadoActivo;
     }
 

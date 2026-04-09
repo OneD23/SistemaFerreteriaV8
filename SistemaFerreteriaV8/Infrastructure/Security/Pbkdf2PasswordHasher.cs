@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using SistemaFerreteriaV8.Application.Abstractions;
+using SistemaFerreteriaV8.AppCore.Abstractions;
 
 namespace SistemaFerreteriaV8.Infrastructure.Security;
 

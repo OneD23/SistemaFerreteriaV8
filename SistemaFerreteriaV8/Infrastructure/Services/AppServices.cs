@@ -1,5 +1,5 @@
-using SistemaFerreteriaV8.Application.Abstractions;
-using SistemaFerreteriaV8.Application.Sales;
+using SistemaFerreteriaV8.AppCore.Abstractions;
+using SistemaFerreteriaV8.AppCore.Sales;
 
 namespace SistemaFerreteriaV8.Infrastructure.Services;
 

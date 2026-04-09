@@ -16,7 +16,7 @@ using System.Windows.Forms;
 using static Org.BouncyCastle.Math.EC.ECCurve;
 using SistemaFerreteriaV8.Infrastructure.Security;
 using SistemaFerreteriaV8.Infrastructure.Services;
-using SistemaFerreteriaV8.Application.Sales;
+using SistemaFerreteriaV8.AppCore.Sales;
 
 namespace SistemaFerreteriaV8
 {

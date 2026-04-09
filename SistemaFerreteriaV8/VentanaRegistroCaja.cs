@@ -168,9 +168,9 @@ namespace SistemaFerreteriaV8
             }
 
             // Asignar empleado activo en Form1 si está abierto
-            if (Application.OpenForms.OfType<Form1>().Any())
+            if (WinFormsApp.OpenForms.OfType<Form1>().Any())
             {
-                Form1 frm = (Form1)Application.OpenForms["Form1"];
+                Form1 frm = (Form1)WinFormsApp.OpenForms["Form1"];
                 frm.EmpleadoActivo = empleado;
             }
             this.Dispose();

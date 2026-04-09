@@ -13,7 +13,7 @@ SistemaFerreteriaV8/
     Forms/
     Controls/
     Presenters/
-  Application/
+  AppCore/
     Abstractions/
     Security/
     Sales/
@@ -39,7 +39,7 @@ SistemaFerreteriaV8/
 
 ## Principios de diseño aplicados
 - **SRP**: cada clase con responsabilidad única.
-- **DIP**: la UI depende de interfaces de Application, no de MongoDB.
+- **DIP**: la UI depende de interfaces de AppCore, no de MongoDB.
 - **Open/Closed**: reglas de negocio extensibles por servicios.
 - **Fail-safe defaults**: seguridad por defecto en acciones críticas.
 - **Observabilidad**: trazabilidad en caja, facturación y cierre.
@@ -73,7 +73,7 @@ SistemaFerreteriaV8/
 `VentanaVentas` → `SalesService` → `FacturaRepository`, `ProductosRepository`, `CajaService`
 
 - La UI no debe tocar colecciones Mongo directamente.
-- Reglas de descuentos y validaciones en capa Application/Domain.
+- Reglas de descuentos y validaciones en capa AppCore/Domain.
 - Operaciones críticas con consistencia transaccional cuando aplique.
 
 ### 3) Inventario y stock
@@ -101,8 +101,8 @@ SistemaFerreteriaV8/
 
 ## Entregables incluidos en esta fase
 - Se creó el **esqueleto inicial de capas** dentro del proyecto actual:
-  - `Application/Abstractions`
-  - `Application/Security`
+  - `AppCore/Abstractions`
+  - `AppCore/Security`
   - `Domain/Security`
   - `Infrastructure/Security`
 - Se incorporaron contratos y clases base para seguridad:

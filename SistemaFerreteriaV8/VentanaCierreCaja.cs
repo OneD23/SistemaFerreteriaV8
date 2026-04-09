@@ -107,7 +107,7 @@ namespace SistemaFerreteriaV8
             {
                 nueva.Estado = "false";
                 await Task.Run(() => nueva.EditarAsync());
-                var frm = Application.OpenForms["Form1"] as Form1;
+                var frm = WinFormsApp.OpenForms["Form1"] as Form1;
                 frm?.Dispose();
                 this.Dispose();
             }

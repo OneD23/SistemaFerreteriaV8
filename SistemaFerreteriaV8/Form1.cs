@@ -135,7 +135,7 @@ namespace SistemaFerreteriaV8
         // Cotizar
         private void button6_Click(object sender, EventArgs e)
         {
-            var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+            var frm = WinFormsApp.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
             if (frm != null)
             {
                 frm.CotizarAsync();

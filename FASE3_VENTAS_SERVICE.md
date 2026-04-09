@@ -2,7 +2,7 @@
 
 ## Qué se extrajo de `VentanaVentas`
 
-Se movió lógica de negocio de cálculo/validación hacia `Application/Sales/SalesService`:
+Se movió lógica de negocio de cálculo/validación hacia `AppCore/Sales/SalesService`:
 
 1. **Cálculo de totales de venta**
    - subtotal
@@ -14,9 +14,9 @@ Se movió lógica de negocio de cálculo/validación hacia `Application/Sales/Sa
 
 ## Clases nuevas
 
-- `ISalesService` (`Application/Abstractions`)
-- `SalesService` (`Application/Sales`)
-- `SaleLineInput` y `SalesTotals` (`Application/Sales`)
+- `ISalesService` (`AppCore/Abstractions`)
+- `SalesService` (`AppCore/Sales`)
+- `SaleLineInput` y `SalesTotals` (`AppCore/Sales`)
 - `AppServices` (`Infrastructure/Services`) para resolver el servicio en transición.
 
 ## Integración actual en UI
