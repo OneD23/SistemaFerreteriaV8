@@ -1,4 +1,5 @@
 ﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Domain.Security;
 using SistemaFerreteriaV8.Infrastructure.Security;
 using System;
 using System.Drawing;
@@ -118,6 +119,13 @@ namespace SistemaFerreteriaV8
             if (!auth.IsAuthenticated)
             {
                 MessageBox.Show("Código incorrecto");
+                Codigo.Text = "";
+                return;
+            }
+
+            if (!SecurityServices.AuthorizationService.HasPermission(auth, AppPermissions.CajaAbrir))
+            {
+                MessageBox.Show("Tu usuario no tiene permiso para abrir caja.", "Acceso denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Codigo.Text = "";
                 return;
             }

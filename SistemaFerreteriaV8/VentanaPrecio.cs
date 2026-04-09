@@ -1,4 +1,5 @@
 ﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Domain.Security;
 using SistemaFerreteriaV8.Infrastructure.Security;
 using System;
 using System.Windows.Forms;
@@ -41,7 +42,7 @@ namespace SistemaFerreteriaV8
                     "Autorización requerida");
                 var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(clave);
 
-                if (SecurityServices.AuthorizationService.IsAdmin(auth))
+                if (SecurityServices.AuthorizationService.HasPermission(auth, AppPermissions.VentasCambiarPrecio))
                 {
                     CambiarPrecioSeleccionado(e.RowIndex, e.ColumnIndex);
                 }
@@ -80,7 +81,7 @@ namespace SistemaFerreteriaV8
                     "Autorización requerida");
                 var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(clave);
 
-                if (SecurityServices.AuthorizationService.IsAdmin(auth))
+                if (SecurityServices.AuthorizationService.HasPermission(auth, AppPermissions.VentasCambiarPrecio))
                 {
                     CambiarPrecioSeleccionado(row, col);
                 }

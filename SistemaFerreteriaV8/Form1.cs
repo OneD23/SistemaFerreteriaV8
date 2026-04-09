@@ -1,4 +1,5 @@
 ﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Domain.Security;
 using SistemaFerreteriaV8.Infrastructure.Security;
 using System;
 using System.Linq;
@@ -62,7 +63,11 @@ namespace SistemaFerreteriaV8
         // Productos (solo admin)
         private async void button2_Click(object sender, EventArgs e)
         {
-            if (await TienePermisoAdmin())
+            if (await PermissionAccess.EnsurePermissionAsync(
+                    EmpleadoActivo,
+                    AppPermissions.InventarioEditar,
+                    this,
+                    "acceder a Productos"))
             {
                 ActivarBoton(sender as Button);
                 AbrirFormulario(new VentanaProductos() { empleado = EmpleadoActivo });
@@ -76,7 +81,11 @@ namespace SistemaFerreteriaV8
         // Usuarios (solo admin)
         private async void button3_Click(object sender, EventArgs e)
         {
-            if (await TienePermisoAdmin())
+            if (await PermissionAccess.EnsurePermissionAsync(
+                    EmpleadoActivo,
+                    AppPermissions.EmpleadosGestionar,
+                    this,
+                    "gestionar usuarios y empleados"))
             {
                 ActivarBoton(sender as Button);
                 AbrirFormulario(new Usuarios());
@@ -90,7 +99,11 @@ namespace SistemaFerreteriaV8
         // Contabilidad (solo admin)
         private async void button4_Click(object sender, EventArgs e)
         {
-            if (await TienePermisoAdmin())
+            if (await PermissionAccess.EnsurePermissionAsync(
+                    EmpleadoActivo,
+                    AppPermissions.ReportesVer,
+                    this,
+                    "acceder a Contabilidad"))
             {
                 ActivarBoton(sender as Button);
                 AbrirFormulario(new Contabilidad() { empleado = EmpleadoActivo });
@@ -104,7 +117,11 @@ namespace SistemaFerreteriaV8
         // Configuraciones (solo admin)
         private async void button5_Click(object sender, EventArgs e)
         {
-            if (await TienePermisoAdmin())
+            if (await PermissionAccess.EnsurePermissionAsync(
+                    EmpleadoActivo,
+                    AppPermissions.ConfiguracionEditar,
+                    this,
+                    "editar configuraciones"))
             {
                 ActivarBoton(sender as Button);
                 AbrirFormulario(new VentanaConfiguraciones());
@@ -127,8 +144,16 @@ namespace SistemaFerreteriaV8
         }
 
         // Cerrar caja
-        private void CerrarCaja_Click(object sender, EventArgs e)
+        private async void CerrarCaja_Click(object sender, EventArgs e)
         {
+            var permitido = await PermissionAccess.EnsurePermissionAsync(
+                EmpleadoActivo,
+                AppPermissions.CajaCerrar,
+                this,
+                "cerrar caja");
+            if (!permitido)
+                return;
+
             var nueva = new VentanaCierreCaja() { empleadoActivo = EmpleadoActivo };
             nueva.ShowDialog();
         }
@@ -172,14 +197,11 @@ namespace SistemaFerreteriaV8
             if (EmpleadoActivo != null && EmpleadoActivo.Puesto == "Administrador")
                 return true;
 
-            string codigo = SecurityPrompt.PromptPassword(
-                "Necesita la clave de Administrador para continuar.",
-                "Autorización requerida");
-            if (string.IsNullOrWhiteSpace(codigo))
-                return false;
-
-            var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(codigo);
-            return SecurityServices.AuthorizationService.IsAdmin(auth);
+            return await PermissionAccess.EnsurePermissionAsync(
+                EmpleadoActivo,
+                AppPermissions.EmpleadosGestionar,
+                this,
+                "confirmar acceso administrativo");
         }
 
         // Si tienes algún timer descomenta esto y úsalo como necesitas
