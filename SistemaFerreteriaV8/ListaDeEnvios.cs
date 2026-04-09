@@ -12,6 +12,51 @@ namespace SistemaFerreteriaV8
         public ListaDeEnvios()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            ModernizarUI();
+            Resize += (_, __) => ReorganizarLayout();
+        }
+
+        private void ModernizarUI()
+        {
+            ListaEnvios.BorderStyle = BorderStyle.None;
+            ListaEnvios.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            ListaEnvios.RowHeadersVisible = false;
+            ListaEnvios.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            ListaEnvios.MultiSelect = false;
+            ListaEnvios.EnableHeadersVisualStyles = false;
+            ListaEnvios.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(24, 36, 60);
+            ListaEnvios.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            ListaEnvios.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(64, 85, 122);
+            ListaEnvios.DefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            ListaEnvios.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(46, 74, 125);
+            ListaEnvios.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
+
+            button4.Text = "Registrar entrega";
+            button5.Text = "Cerrar";
+            foreach (var btn in new[] { button4, button5 })
+            {
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+                btn.Height = 40;
+            }
+
+            ReorganizarLayout();
+        }
+
+        private void ReorganizarLayout()
+        {
+            const int margen = 18;
+            label1.Left = (ClientSize.Width - label1.Width) / 2;
+            label1.Top = 22;
+
+            ListaEnvios.Location = new System.Drawing.Point(margen, label1.Bottom + 16);
+            ListaEnvios.Size = new System.Drawing.Size(ClientSize.Width - margen * 2, ClientSize.Height - 140);
+
+            int y = ListaEnvios.Bottom + 12;
+            int anchoBtn = 180;
+            button5.SetBounds(ClientSize.Width - margen - anchoBtn, y, anchoBtn, 40);
+            button4.SetBounds(button5.Left - 12 - anchoBtn, y, anchoBtn, 40);
         }
 
         private void button1_Click(object sender, EventArgs e)
