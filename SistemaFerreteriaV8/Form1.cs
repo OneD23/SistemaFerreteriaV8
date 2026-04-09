@@ -1,5 +1,6 @@
-﻿using Microsoft.VisualBasic;
-using SistemaFerreteriaV8.Clases;
+﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Domain.Security;
+using SistemaFerreteriaV8.Infrastructure.Security;
 using System;
 using System.Linq;
 using System.Drawing;
@@ -62,7 +63,11 @@ namespace SistemaFerreteriaV8
         // Productos (solo admin)
         private async void button2_Click(object sender, EventArgs e)
         {
-            if (await TienePermisoAdmin())
+            if (await PermissionAccess.EnsurePermissionAsync(
+                    EmpleadoActivo,
+                    AppPermissions.InventarioEditar,
+                    this,
+                    "acceder a Productos"))
             {
                 ActivarBoton(sender as Button);
                 AbrirFormulario(new VentanaProductos() { empleado = EmpleadoActivo });
@@ -76,7 +81,11 @@ namespace SistemaFerreteriaV8
         // Usuarios (solo admin)
         private async void button3_Click(object sender, EventArgs e)
         {
-            if (await TienePermisoAdmin())
+            if (await PermissionAccess.EnsurePermissionAsync(
+                    EmpleadoActivo,
+                    AppPermissions.EmpleadosGestionar,
+                    this,
+                    "gestionar usuarios y empleados"))
             {
                 ActivarBoton(sender as Button);
                 AbrirFormulario(new Usuarios());
@@ -90,7 +99,11 @@ namespace SistemaFerreteriaV8
         // Contabilidad (solo admin)
         private async void button4_Click(object sender, EventArgs e)
         {
-            if (await TienePermisoAdmin())
+            if (await PermissionAccess.EnsurePermissionAsync(
+                    EmpleadoActivo,
+                    AppPermissions.ReportesVer,
+                    this,
+                    "acceder a Contabilidad"))
             {
                 ActivarBoton(sender as Button);
                 AbrirFormulario(new Contabilidad() { empleado = EmpleadoActivo });
@@ -104,7 +117,11 @@ namespace SistemaFerreteriaV8
         // Configuraciones (solo admin)
         private async void button5_Click(object sender, EventArgs e)
         {
-            if (await TienePermisoAdmin())
+            if (await PermissionAccess.EnsurePermissionAsync(
+                    EmpleadoActivo,
+                    AppPermissions.ConfiguracionEditar,
+                    this,
+                    "editar configuraciones"))
             {
                 ActivarBoton(sender as Button);
                 AbrirFormulario(new VentanaConfiguraciones());
@@ -118,7 +135,7 @@ namespace SistemaFerreteriaV8
         // Cotizar
         private void button6_Click(object sender, EventArgs e)
         {
-            var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+            var frm = WinFormsApp.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
             if (frm != null)
             {
                 frm.CotizarAsync();
@@ -127,8 +144,16 @@ namespace SistemaFerreteriaV8
         }
 
         // Cerrar caja
-        private void CerrarCaja_Click(object sender, EventArgs e)
+        private async void CerrarCaja_Click(object sender, EventArgs e)
         {
+            var permitido = await PermissionAccess.EnsurePermissionAsync(
+                EmpleadoActivo,
+                AppPermissions.CajaCerrar,
+                this,
+                "cerrar caja");
+            if (!permitido)
+                return;
+
             var nueva = new VentanaCierreCaja() { empleadoActivo = EmpleadoActivo };
             nueva.ShowDialog();
         }
@@ -172,9 +197,11 @@ namespace SistemaFerreteriaV8
             if (EmpleadoActivo != null && EmpleadoActivo.Puesto == "Administrador")
                 return true;
 
-            string codigo = Interaction.InputBox("Necesita la clave del Administrador para editar");
-            Empleado iban = await Empleado.BuscarPorClaveAsync("contrasena", codigo);
-            return iban != null && iban.Puesto == "Administrador";
+            return await PermissionAccess.EnsurePermissionAsync(
+                EmpleadoActivo,
+                AppPermissions.EmpleadosGestionar,
+                this,
+                "confirmar acceso administrativo");
         }
 
         // Si tienes algún timer descomenta esto y úsalo como necesitas

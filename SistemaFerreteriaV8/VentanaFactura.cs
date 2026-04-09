@@ -70,7 +70,7 @@ namespace SistemaFerreteriaV8
                     return;
                 }
 
-                Form1 frmPrincipal = Application.OpenForms["Form1"] as Form1;
+                Form1 frmPrincipal = WinFormsApp.OpenForms["Form1"] as Form1;
                 Empleado usuarioActual = frmPrincipal?.EmpleadoActivo;
 
                 Factura.MotivoEliminacion = motivo.Trim();
