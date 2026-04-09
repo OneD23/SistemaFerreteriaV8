@@ -54,6 +54,26 @@ namespace SistemaFerreteriaV8
             NombreCliente.Location = new Point(xInputInfo, NombreCliente.Location.Y);
             tipoFactura.Location = new Point(xInputInfo, tipoFactura.Location.Y);
 
+            // Bloque Fecha/Hora/No. Factura (lado derecho)
+            int xLabelFecha = 500;
+            int wLabelFecha = 120;
+            int xValorFecha = 630;
+            foreach (var lbl in new[] { label5, label6, label4 })
+            {
+                lbl.AutoSize = false;
+                lbl.TextAlign = ContentAlignment.MiddleRight;
+                lbl.Location = new Point(xLabelFecha, lbl.Location.Y);
+                lbl.Size = new Size(wLabelFecha, 24);
+            }
+
+            foreach (var valor in new[] { Fecha, Hora, NoFactura })
+            {
+                valor.AutoSize = false;
+                valor.Location = new Point(xValorFecha, valor.Location.Y);
+                valor.Size = new Size(130, 24);
+                valor.TextAlign = ContentAlignment.MiddleLeft;
+            }
+
             // --- Opciones: Dirección / Nota ---
             int xLabelOpc = 20;
             int wLabelOpc = 95;

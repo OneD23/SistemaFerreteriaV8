@@ -3,6 +3,7 @@ using SistemaFerreteriaV8.Clases;
 using System;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 
@@ -15,6 +16,7 @@ namespace SistemaFerreteriaV8
         private readonly Label lblEstado = new Label();
         private readonly Button btnGuardar = new Button();
         private readonly Button btnActualizar = new Button();
+        private bool cargando = false;
 
         public VentanaTendenciaGastos()
         {
@@ -24,8 +26,11 @@ namespace SistemaFerreteriaV8
             Padding = new Padding(12);
 
             ConstruirUI();
-            CargarGastoMensual();
-            CargarTendencia();
+            Load += async (_, __) =>
+            {
+                CargarGastoMensual();
+                await CargarTendenciaAsync();
+            };
         }
 
         private void ConstruirUI()
@@ -52,13 +57,13 @@ namespace SistemaFerreteriaV8
             btnGuardar.Text = "Guardar gasto";
             btnGuardar.Location = new Point(305, 12);
             btnGuardar.Size = new Size(120, 30);
-            btnGuardar.Click += (_, __) => GuardarGastoMensual();
+            btnGuardar.Click += async (_, __) => await GuardarGastoMensualAsync();
             panelTop.Controls.Add(btnGuardar);
 
             btnActualizar.Text = "Actualizar gráfica";
             btnActualizar.Location = new Point(432, 12);
             btnActualizar.Size = new Size(130, 30);
-            btnActualizar.Click += (_, __) => CargarTendencia();
+            btnActualizar.Click += async (_, __) => await CargarTendenciaAsync();
             panelTop.Controls.Add(btnActualizar);
 
             lblEstado.ForeColor = Color.White;
@@ -93,7 +98,7 @@ namespace SistemaFerreteriaV8
             txtGastoMensual.Text = config.GastoMensual.ToString("0.##");
         }
 
-        private void GuardarGastoMensual()
+        private async Task GuardarGastoMensualAsync()
         {
             if (!double.TryParse(txtGastoMensual.Text, out var gasto) || gasto < 0)
             {
@@ -104,11 +109,18 @@ namespace SistemaFerreteriaV8
             var config = ObtenerConfig();
             config.GastoMensual = gasto;
             config.Guardar();
-            CargarTendencia();
+            await CargarTendenciaAsync();
         }
 
-        private void CargarTendencia()
+        private async Task CargarTendenciaAsync()
         {
+            if (cargando) return;
+            cargando = true;
+            btnActualizar.Enabled = false;
+            btnGuardar.Enabled = false;
+            lblEstado.Text = "Cargando tendencia...";
+            lblEstado.ForeColor = Color.Gainsboro;
+
             chartTendencia.Series.Clear();
             chartTendencia.ChartAreas[0].AxisX.StripLines.Clear();
 
@@ -131,7 +143,7 @@ namespace SistemaFerreteriaV8
             var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var finMes = inicioMes.AddMonths(1).AddTicks(-1);
 
-            var facturasMes = Factura.ListarFacturasPorFechaAsync(inicioMes, finMes).GetAwaiter().GetResult()
+            var facturasMes = (await Factura.ListarFacturasPorFechaAsync(inicioMes, finMes))
                 .Where(f => !f.Eliminada)
                 .OrderBy(f => f.Fecha)
                 .ToList();
@@ -179,6 +191,10 @@ namespace SistemaFerreteriaV8
                 lblEstado.Text = "⚠ Aún no se supera el gasto mensual.";
                 lblEstado.ForeColor = Color.Gold;
             }
+
+            btnActualizar.Enabled = true;
+            btnGuardar.Enabled = true;
+            cargando = false;
         }
     }
 }
