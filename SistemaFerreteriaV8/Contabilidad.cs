@@ -26,6 +26,8 @@ namespace SistemaFerreteriaV8
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
             InicializarBotonTendencia();
             InicializarBotonExportacionDatos();
+            AlinearBotonesTop();
+            panel1.Resize += (_, __) => AlinearBotonesTop();
         }
         private void InicializarBotonTendencia()
         {
@@ -62,6 +64,35 @@ namespace SistemaFerreteriaV8
 
             ConfigurarMenuExportacion();
             panel1.Controls.Add(btnExportacionDatos);
+        }
+
+        private void AlinearBotonesTop()
+        {
+            var botones = new List<Button> { Estadistica, Inventario, btnTendencia, button4, btnExportacionDatos };
+            const int separacion = 12;
+            int cantidad = botones.Count;
+            int anchoDisponible = panel1.Width - ((cantidad + 1) * separacion);
+            int anchoBoton = Math.Max(140, anchoDisponible / cantidad);
+            int altoBoton = 42;
+            int y = 12;
+            int x = separacion;
+
+            foreach (var btn in botones)
+            {
+                btn.Size = new Size(anchoBoton, altoBoton);
+                btn.Location = new Point(x, y);
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+                x += anchoBoton + separacion;
+            }
+
+            btnExportacionDatos.BackColor = Color.FromArgb(46, 74, 125);
+            btnExportacionDatos.ForeColor = Color.White;
+            foreach (var btn in botones.Where(b => b != btnExportacionDatos))
+            {
+                btn.BackColor = Color.FromArgb(211, 47, 47);
+                btn.ForeColor = Color.White;
+            }
         }
 
         private void ConfigurarMenuExportacion()
@@ -106,7 +137,7 @@ namespace SistemaFerreteriaV8
             var data = await new Cliente().ListarAsync();
             GuardarCsv("clientes_todos.csv",
                 "Id,Nombre,Cedula,RNC,Telefono,Correo,LimiteCredito",
-                data.Select(c => $"{Esc(c.Id)},{Esc(c.Nombre)},{Esc(c.Cedula)},{Esc(c.Cedula)},{Esc(c.Telefono)},{Esc(c.Correo)},{c.LimiteCredito:F2}"));
+                data.Select(c => $"{Esc(c.Id)},{Esc(c.Nombre)},{Esc(c.Cedula)},{Esc(c.RNC)},{Esc(c.Telefono)},{Esc(c.Correo)},{c.LimiteCredito:F2}"));
         }
         private async Task ExportarEmpleadosAsync()
         {

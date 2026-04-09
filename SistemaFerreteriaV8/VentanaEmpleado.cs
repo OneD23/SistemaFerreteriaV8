@@ -22,6 +22,9 @@ namespace SistemaFerreteriaV8
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
             InicializarControlSueldo();
+            button1.Click += BuscarTodo_Click;
+            ReestructurarInterfaz();
+            Resize += (_, __) => ReestructurarInterfaz();
         }
 
         private void InicializarControlSueldo()
@@ -41,6 +44,90 @@ namespace SistemaFerreteriaV8
 
             groupBox1.Controls.Add(lblSueldo);
             groupBox1.Controls.Add(txtSueldo);
+        }
+
+        private void ReestructurarInterfaz()
+        {
+            int margen = 12;
+            int espacio = 12;
+            int formularioH = 440;
+
+            groupBox1.Location = new Point(margen, margen);
+            groupBox1.Size = new Size(430, formularioH);
+
+            groupBox3.Location = new Point(groupBox1.Right + espacio, margen);
+            groupBox3.Size = new Size(Math.Max(420, ClientSize.Width - groupBox1.Width - (margen * 2) - espacio), formularioH);
+
+            groupBox2.Location = new Point(margen, groupBox1.Bottom + espacio);
+            groupBox2.Size = new Size(ClientSize.Width - (margen * 2), Math.Max(190, ClientSize.Height - groupBox2.Location.Y - margen));
+
+            ListaDeCompras.Location = new Point(12, 24);
+            ListaDeCompras.Size = new Size(groupBox3.Width - 24, groupBox3.Height - 36);
+            ListaDeEmpleado.Location = new Point(12, 24);
+            ListaDeEmpleado.Size = new Size(groupBox2.Width - 24, groupBox2.Height - 36);
+
+            int xLabel = 20;
+            int wLabel = 120;
+            int xInput = 150;
+            int wInput = 250;
+            int y = 32;
+            int h = 30;
+            int gap = 38;
+            label4.Text = "Dirección:";
+            label6.Text = "Código:";
+            button1.Text = "Buscar ID";
+
+            ConfigurarCampo(label5, Id, xLabel, wLabel, xInput, wInput, y, h);
+            button1.Location = new Point(xInput + wInput - 96, y);
+            button1.Size = new Size(96, h);
+            y += gap;
+            ConfigurarCampo(label1, Nombre, xLabel, wLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigurarCampo(label2, Cedula, xLabel, wLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigurarCampo(label4, Direccion, xLabel, wLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigurarCampo(label3, Telefono, xLabel, wLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigurarCampo(label7, Puesto, xLabel, wLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigurarCampo(label6, Codigo, xLabel, wLabel, xInput, wInput, y, h);
+            y += gap;
+
+            lblSueldo.AutoSize = false;
+            lblSueldo.TextAlign = ContentAlignment.MiddleRight;
+            lblSueldo.Location = new Point(xLabel, y);
+            lblSueldo.Size = new Size(wLabel, h);
+            txtSueldo.Location = new Point(xInput, y + 4);
+            txtSueldo.Size = new Size(wInput, 24);
+
+            int yBotones = groupBox1.Height - 96;
+            int wBoton = 124;
+            int hBoton = 36;
+            int sepBoton = 10;
+            Nuevo.Location = new Point(20, yBotones);
+            Editar.Location = new Point(20 + wBoton + sepBoton, yBotones);
+            Guardar.Location = new Point(20 + ((wBoton + sepBoton) * 2), yBotones);
+            BuscarTodo.Location = new Point(20, yBotones + hBoton + 8);
+            button3.Location = new Point(20 + wBoton + sepBoton, yBotones + hBoton + 8);
+            Cancelar.Location = new Point(20 + ((wBoton + sepBoton) * 2), yBotones + hBoton + 8);
+
+            foreach (var btn in new[] { Nuevo, Editar, Guardar, BuscarTodo, button3, Cancelar, button1 })
+            {
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+            }
+        }
+
+        private static void ConfigurarCampo(Control label, Control input, int xLabel, int wLabel, int xInput, int wInput, int y, int h)
+        {
+            label.AutoSize = false;
+            label.TextAlign = ContentAlignment.MiddleRight;
+            label.Location = new Point(xLabel, y);
+            label.Size = new Size(wLabel, h);
+
+            input.Location = new Point(xInput, y + 4);
+            input.Size = new Size(wInput, 24);
         }
 
         private void Nuevo_Click(object sender, EventArgs e)
