@@ -17,4 +17,18 @@ public sealed record SalesWorkflowRequest(
 public sealed record SalesWorkflowResult(
     bool Success,
     string Message,
-    Factura? PersistedInvoice = null);
+    Factura? PersistedInvoice = null,
+    SalesWorkflowErrorType ErrorType = SalesWorkflowErrorType.None,
+    string OperationId = "",
+    DateTime StartedAtUtc = default,
+    DateTime FinishedAtUtc = default);
+
+public enum SalesWorkflowErrorType
+{
+    None = 0,
+    Validation = 1,
+    Persistence = 2,
+    Stock = 3,
+    Compensation = 4,
+    Unexpected = 5
+}

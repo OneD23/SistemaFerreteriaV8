@@ -8,11 +8,34 @@ public sealed class SalesWorkflowService : ISalesWorkflowService
 {
     public async Task<SalesWorkflowResult> ConfirmSaleAsync(SalesWorkflowRequest request)
     {
+        var operationId = Guid.NewGuid().ToString("N");
+        var startedAt = DateTime.UtcNow;
+
         try
         {
-            var listProducts = await BuildPersistableListProductsAsync(request.Draft.Lines, request.ApplyStockMovement);
-            if (listProducts.Count == 0)
-                return new SalesWorkflowResult(false, "No hay líneas válidas para persistir.");
+            var mapResult = await BuildPersistableListProductsAsync(request.Draft.Lines, request.ApplyStockMovement);
+            if (!mapResult.Success)
+            {
+                await AppServices.Audit.WriteAsync(
+                    "venta_confirmacion",
+                    "ventas",
+                    "validation_error",
+                    mapResult.Message,
+                    request.Draft.EmployeeId,
+                    request.Draft.CustomerName,
+                    new { operationId, request.Draft.InvoiceId });
+
+                return new SalesWorkflowResult(
+                    false,
+                    mapResult.Message,
+                    null,
+                    SalesWorkflowErrorType.Validation,
+                    operationId,
+                    startedAt,
+                    DateTime.UtcNow);
+            }
+
+            var listProducts = mapResult.Products;
 
             var invoice = new Factura
             {
@@ -48,19 +71,72 @@ public sealed class SalesWorkflowService : ISalesWorkflowService
                     invoice.Estado = "stock_error";
                     invoice.Informacion = stockResult.Message;
                     await invoice.ActualizarFacturaAsync();
-                    return new SalesWorkflowResult(false, stockResult.Message, invoice);
+
+                    var errorType = stockResult.CompensationFailed
+                        ? SalesWorkflowErrorType.Compensation
+                        : SalesWorkflowErrorType.Stock;
+
+                    await AppServices.Audit.WriteAsync(
+                        "venta_confirmacion",
+                        "ventas",
+                        "stock_error",
+                        stockResult.Message,
+                        request.Draft.EmployeeId,
+                        request.Draft.CustomerName,
+                        new { operationId, request.Draft.InvoiceId, errorType = errorType.ToString() });
+
+                    return new SalesWorkflowResult(
+                        false,
+                        stockResult.Message,
+                        invoice,
+                        errorType,
+                        operationId,
+                        startedAt,
+                        DateTime.UtcNow);
                 }
             }
 
-            return new SalesWorkflowResult(true, "Venta confirmada correctamente.", invoice);
+            await AppServices.Audit.WriteAsync(
+                "venta_confirmacion",
+                "ventas",
+                "ok",
+                "Venta confirmada correctamente.",
+                request.Draft.EmployeeId,
+                request.Draft.CustomerName,
+                new { operationId, request.Draft.InvoiceId, request.Draft.Total });
+
+            return new SalesWorkflowResult(
+                true,
+                "Venta confirmada correctamente.",
+                invoice,
+                SalesWorkflowErrorType.None,
+                operationId,
+                startedAt,
+                DateTime.UtcNow);
         }
         catch (Exception ex)
         {
-            return new SalesWorkflowResult(false, $"Error al confirmar venta: {ex.Message}");
+            await AppServices.Audit.WriteAsync(
+                "venta_confirmacion",
+                "ventas",
+                "unexpected_error",
+                ex.Message,
+                request.Draft.EmployeeId,
+                request.Draft.CustomerName,
+                new { operationId, request.Draft.InvoiceId });
+
+            return new SalesWorkflowResult(
+                false,
+                $"Error al confirmar venta: {ex.Message}",
+                null,
+                SalesWorkflowErrorType.Unexpected,
+                operationId,
+                startedAt,
+                DateTime.UtcNow);
         }
     }
 
-    private static async Task<List<ListProduct>> BuildPersistableListProductsAsync(
+    private static async Task<(bool Success, string Message, List<ListProduct> Products)> BuildPersistableListProductsAsync(
         IReadOnlyCollection<InvoiceDraftLine> lines,
         bool validateStock)
     {
@@ -84,10 +160,11 @@ public sealed class SalesWorkflowService : ISalesWorkflowService
                     : await Productos.BuscarPorClaveAsync("nombre", line.ProductName);
 
                 if (validateStock && (product == null || product.Cantidad < line.Quantity))
-                    return new List<ListProduct>();
+                    return (false, $"Stock insuficiente para '{line.ProductName}' al mapear líneas persistibles.", result);
             }
 
-            if (product == null) continue;
+            if (product == null)
+                return (false, $"Producto '{line.ProductName}' no encontrado al mapear líneas persistibles.", result);
 
             result.Add(new ListProduct
             {
@@ -97,12 +174,13 @@ public sealed class SalesWorkflowService : ISalesWorkflowService
             });
         }
 
-        return result;
+        return (true, string.Empty, result);
     }
 
-    private static async Task<(bool Success, string Message)> ApplyStockMovementAsync(IEnumerable<ListProduct> items)
+    private static async Task<(bool Success, string Message, bool CompensationFailed)> ApplyStockMovementAsync(IEnumerable<ListProduct> items)
     {
         var touched = new List<(Productos Product, double OriginalQty, double OriginalSold)>();
+        var compensationFailed = false;
 
         try
         {
@@ -116,10 +194,10 @@ public sealed class SalesWorkflowService : ISalesWorkflowService
                     : await Productos.BuscarPorClaveAsync("nombre", item.Producto.Nombre);
 
                 if (product == null)
-                    return (false, $"No se encontró el producto '{item.Producto.Nombre}' al descontar stock.");
+                    return (false, $"No se encontró el producto '{item.Producto.Nombre}' al descontar stock.", false);
 
                 if (product.Cantidad < item.Cantidad)
-                    return (false, $"Stock insuficiente para '{product.Nombre}'. Disponible={product.Cantidad}, requerido={item.Cantidad}.");
+                    return (false, $"Stock insuficiente para '{product.Nombre}'. Disponible={product.Cantidad}, requerido={item.Cantidad}.", false);
 
                 touched.Add((product, product.Cantidad, product.Vendido));
 
@@ -128,7 +206,7 @@ public sealed class SalesWorkflowService : ISalesWorkflowService
                 await product.ActualizarProductosAsync();
             }
 
-            return (true, string.Empty);
+            return (true, string.Empty, false);
         }
         catch (Exception ex)
         {
@@ -143,11 +221,11 @@ public sealed class SalesWorkflowService : ISalesWorkflowService
                 }
                 catch
                 {
-                    // best-effort
+                    compensationFailed = true;
                 }
             }
 
-            return (false, $"Falló la actualización de stock: {ex.Message}");
+            return (false, $"Falló la actualización de stock: {ex.Message}", compensationFailed);
         }
     }
 }
