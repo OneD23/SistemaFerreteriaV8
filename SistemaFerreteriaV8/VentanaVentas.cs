@@ -32,6 +32,84 @@ namespace SistemaFerreteriaV8
         public VentanaVentas()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            AjustarAlineacionVisual();
+        }
+        private void AjustarAlineacionVisual()
+        {
+            // --- Informe de Facturación ---
+            int xLabelInfo = 20;
+            int wLabelInfo = 170;
+            int xInputInfo = 210;
+
+            foreach (var lbl in new[] { label1, label3, label2 })
+            {
+                lbl.AutoSize = false;
+                lbl.TextAlign = ContentAlignment.MiddleRight;
+                lbl.Location = new Point(xLabelInfo, lbl.Location.Y);
+                lbl.Size = new Size(wLabelInfo, 24);
+            }
+
+            IdCliente.Location = new Point(xInputInfo, IdCliente.Location.Y);
+            NombreCliente.Location = new Point(xInputInfo, NombreCliente.Location.Y);
+            tipoFactura.Location = new Point(xInputInfo, tipoFactura.Location.Y);
+
+            // Bloque Fecha/Hora/No. Factura (lado derecho)
+            int xLabelFecha = 500;
+            int wLabelFecha = 120;
+            int xValorFecha = 630;
+            foreach (var lbl in new[] { label5, label6, label4 })
+            {
+                lbl.AutoSize = false;
+                lbl.TextAlign = ContentAlignment.MiddleRight;
+                lbl.Location = new Point(xLabelFecha, lbl.Location.Y);
+                lbl.Size = new Size(wLabelFecha, 24);
+            }
+
+            foreach (var valor in new[] { Fecha, Hora, NoFactura })
+            {
+                valor.AutoSize = false;
+                valor.Location = new Point(xValorFecha, valor.Location.Y);
+                valor.Size = new Size(130, 24);
+                valor.TextAlign = ContentAlignment.MiddleLeft;
+            }
+
+            // --- Opciones: Dirección / Nota ---
+            int xLabelOpc = 20;
+            int wLabelOpc = 95;
+            int xInputOpc = 130;
+
+            foreach (var lbl in new[] { label11, label12 })
+            {
+                lbl.AutoSize = false;
+                lbl.TextAlign = ContentAlignment.MiddleRight;
+                lbl.Location = new Point(xLabelOpc, lbl.Location.Y);
+                lbl.Size = new Size(wLabelOpc, 24);
+            }
+
+            direccion.Location = new Point(xInputOpc, direccion.Location.Y);
+            descripcion.Location = new Point(xInputOpc, descripcion.Location.Y);
+            direccion.Width = groupBox3.Width - xInputOpc - 12;
+            descripcion.Width = groupBox3.Width - xInputOpc - 12;
+
+            // --- Panel de Totales ---
+            int xLabelTotales = 15;
+            int wLabelTotales = 185;
+            int xValorTotales = 210;
+            foreach (var lbl in new[] { label7, label8, label13, label9 })
+            {
+                lbl.AutoSize = false;
+                lbl.TextAlign = ContentAlignment.MiddleRight;
+                lbl.Location = new Point(xLabelTotales, lbl.Location.Y);
+                lbl.Size = new Size(wLabelTotales, 24);
+            }
+
+            SubTotal.Location = new Point(xValorTotales, SubTotal.Location.Y);
+            Descuento.Location = new Point(xValorTotales, Descuento.Location.Y);
+            Total.Location = new Point(xValorTotales, Total.Location.Y);
+            FiltroDescuento.Location = new Point(xValorTotales, FiltroDescuento.Location.Y);
+            ADescontar.Location = new Point(xValorTotales + 50, ADescontar.Location.Y);
+            ADescontar.Width = 120;
         }
 
         #region Limpieza del Formulario
@@ -80,7 +158,7 @@ namespace SistemaFerreteriaV8
             }
 
             // Mostrar número de factura actual
-            NoFactura.Text = facturaActiva.Id.ToString();
+            NoFactura.Text = facturaActiva.Id > 0 ? facturaActiva.Id.ToString() : "Pendiente";
         }
 
         #endregion
@@ -154,6 +232,7 @@ namespace SistemaFerreteriaV8
             }
 
             facturaActiva.Editada = true;
+            esCargada = true; // Evita volver a registrar inventario al guardar/venta rápida una factura ya existente.
             // Actualiza los cambios de la factura en la BD
             await facturaActiva.ActualizarFacturaAsync();
         }
@@ -164,7 +243,7 @@ namespace SistemaFerreteriaV8
         // 1. RegistrarFactura ahora como async Task, usando métodos async y evitando async void.
         public async Task RegistrarFacturaAsync(bool paga)
         {
-            if (string.IsNullOrWhiteSpace(NoFactura.Text)) return;
+            if (facturaActiva == null) return;
 
             // 1. Construir la lista de productos desde la DataGridView
             var listaProducto = ListaDeCompras.Rows
@@ -202,7 +281,14 @@ namespace SistemaFerreteriaV8
             var cajaActiva = await  Caja.BuscarPorClaveAsync("estado", "true");
 
             // 3. Crear o actualizar factura
-            int idFactura = facturaActiva?.Id ?? (int.TryParse(NoFactura.Text, out var idTmp) ? idTmp : new Factura().Id);
+            int idFactura = facturaActiva?.Id ?? 0;
+            if (idFactura <= 0 && int.TryParse(NoFactura.Text, out var idTmp))
+                idFactura = idTmp;
+            if (idFactura <= 0)
+                idFactura = Factura.GenerarSiguienteId();
+
+            facturaActiva.Id = idFactura;
+            NoFactura.Text = idFactura.ToString();
             var factura = new Factura
             {
                 Id = idFactura,
@@ -211,7 +297,7 @@ namespace SistemaFerreteriaV8
                 NombreEmpresa = cajaActiva?.Id ?? "Empresa no definida",
                 RNC = IdCliente.Text,
                 IdCliente = IdCliente.Text,
-                Fecha = DateTime.Now.AddHours(-4),
+                Fecha = DateTime.Now,
                 IdEmpleado = empleado.Id.ToString(),
                 Productos = listaProducto,
                 Total = totalActivo,
@@ -865,7 +951,8 @@ private void button10_Click(object sender, EventArgs e)
 
             // Actualizar BD e inventario
             await facturaActiva.ActualizarFacturaAsync();
-            await facturaActiva.RegistrarProductosAsync(+1);
+            if (!esCargada)
+                await facturaActiva.RegistrarProductosAsync(+1);
 
             LimpiarTodo();
             }
