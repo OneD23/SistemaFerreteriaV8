@@ -138,7 +138,7 @@ namespace SistemaFerreteriaV8
                         );
 
                         // Actualizar VentanaVentas si está abierta
-                        var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+                        var frm = WinFormsApp.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
                         if (frm != null)
                         {
                             await frm.CargarFacturaAsync(factura);
@@ -180,7 +180,7 @@ namespace SistemaFerreteriaV8
             if (!string.IsNullOrWhiteSpace(id))
             {
                 var factura = await Factura.BuscarAsync(id);
-                var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+                var frm = WinFormsApp.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
                 if (frm != null)
                 {
                     await frm.CargarFacturaAsync(factura);

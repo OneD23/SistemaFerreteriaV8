@@ -16,7 +16,7 @@ public static class GlobalKeyListener
 
     private static void HookKeyboard()
     {
-        Application.AddMessageFilter(new KeyboardMessageFilter());
+        WinFormsApp.AddMessageFilter(new KeyboardMessageFilter());
     }
 
     private class KeyboardMessageFilter : IMessageFilter

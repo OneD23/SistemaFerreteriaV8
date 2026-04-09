@@ -4,6 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Octetus.ConsultasDgii.Services;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Domain.Security;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,6 +14,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static Org.BouncyCastle.Math.EC.ECCurve;
+using SistemaFerreteriaV8.Infrastructure.Security;
+using SistemaFerreteriaV8.Infrastructure.Services;
+using SistemaFerreteriaV8.AppCore.Sales;
 
 namespace SistemaFerreteriaV8
 {
@@ -178,9 +182,11 @@ namespace SistemaFerreteriaV8
             bool puedeEditar = empleado?.Puesto == "Administrador";
             if (!puedeEditar)
             {
-                string clave = Interaction.InputBox("Necesita la clave del Administrador para editar");
-                var admin = await  Empleado.BuscarPorClaveAsync("contrasena", clave);
-                puedeEditar = admin?.Puesto == "Administrador";
+                puedeEditar = await PermissionAccess.EnsurePermissionAsync(
+                    empleado,
+                    AppPermissions.VentasCancelar,
+                    this,
+                    "editar una factura");
             }
 
             if (!puedeEditar)
@@ -343,27 +349,25 @@ namespace SistemaFerreteriaV8
         // 2. AsignarTotales mantiene cálculos en UI thread
         public void AsignarTotales()
         {
-            double subtotal = 0;
-            foreach (DataGridViewRow row in ListaDeCompras.Rows)
-            {
-                if (row.Cells[5]?.Value != null && double.TryParse(row.Cells[5].Value.ToString(), out var val))
-                    subtotal += val;
-            }
+            var lines = ListaDeCompras.Rows
+                .Cast<DataGridViewRow>()
+                .Where(r => r.Cells[4]?.Value != null && r.Cells[3]?.Value != null)
+                .Select(r =>
+                {
+                    double.TryParse(r.Cells[4].Value?.ToString(), out var qty);
+                    double.TryParse(r.Cells[3].Value?.ToString(), out var price);
+                    return new SaleLineInput(qty, price);
+                })
+                .ToList();
 
-            totalActivo = subtotal;
-            if (double.TryParse(ADescontar.Text.Replace("$", ""), out var dto))
-            {
-                descuentoActivo = (FiltroDescuento.SelectedIndex == 0)
-                    ? subtotal * (dto / 100.0)
-                    : dto;
-            }
-            else
-            {
-                descuentoActivo = 0;
-            }
+            var totals = AppServices.Sales.CalculateTotals(
+                lines,
+                ADescontar.Text,
+                FiltroDescuento.SelectedIndex == 0);
 
-            // Actualizar UI
-            ActualizarTotalesUI(subtotal);
+            totalActivo = totals.Subtotal;
+            descuentoActivo = totals.Discount;
+            ActualizarTotalesUI(totals.Subtotal);
         }
 
         // 3. ActualizarTotalesUI simplificado
@@ -813,8 +817,15 @@ private void button10_Click(object sender, EventArgs e)
             NombreABuscar.Focus();
         }
 
-        private void button13_Click(object sender, EventArgs e)
+        private async void button13_Click(object sender, EventArgs e)
         {
+            var permitido = await PermissionAccess.EnsurePermissionAsync(
+                empleado,
+                AppPermissions.VentasDescuento,
+                this,
+                "aplicar descuentos");
+            if (!permitido) return;
+
             // Disminuye la cantidad del producto seleccionado
             var row = ListaDeCompras.CurrentRow;
             if (row == null) return;
@@ -833,8 +844,15 @@ private void button10_Click(object sender, EventArgs e)
             }
         }
 
-        private void button15_Click(object sender, EventArgs e)
+        private async void button15_Click(object sender, EventArgs e)
         {
+            var permitido = await PermissionAccess.EnsurePermissionAsync(
+                empleado,
+                AppPermissions.VentasDescuento,
+                this,
+                "modificar descuento/cantidad");
+            if (!permitido) return;
+
             // Aumenta la cantidad del producto seleccionado
             var row = ListaDeCompras.CurrentRow;
             if (row == null) return;
@@ -857,6 +875,24 @@ private void button10_Click(object sender, EventArgs e)
 
         private async void button18_Click(object sender, EventArgs e)
         {
+            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, "registrar venta"))
+                return;
+
+            var lines = ListaDeCompras.Rows
+                .Cast<DataGridViewRow>()
+                .Where(r => r.Cells[4]?.Value != null && r.Cells[3]?.Value != null)
+                .Select(r =>
+                {
+                    double.TryParse(r.Cells[4].Value?.ToString(), out var qty);
+                    double.TryParse(r.Cells[3].Value?.ToString(), out var price);
+                    return new SaleLineInput(qty, price);
+                });
+            if (!AppServices.Sales.CanCreateSale(lines))
+            {
+                MessageBox.Show("Debe agregar al menos un producto válido para registrar la venta.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             // Registrar productos en inventario si no está cargada
             if (!esCargada && facturaActiva != null)
                 await facturaActiva.RegistrarProductosAsync(+1);
@@ -869,6 +905,24 @@ private void button10_Click(object sender, EventArgs e)
 
         private async void Cobrar_Click(object sender, EventArgs e)
         {
+            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, "cobrar venta"))
+                return;
+
+            var lines = ListaDeCompras.Rows
+                .Cast<DataGridViewRow>()
+                .Where(r => r.Cells[4]?.Value != null && r.Cells[3]?.Value != null)
+                .Select(r =>
+                {
+                    double.TryParse(r.Cells[4].Value?.ToString(), out var qty);
+                    double.TryParse(r.Cells[3].Value?.ToString(), out var price);
+                    return new SaleLineInput(qty, price);
+                });
+            if (!AppServices.Sales.CanCreateSale(lines))
+            {
+                MessageBox.Show("Debe agregar al menos un producto válido para cobrar.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             if (ValidarDireccionParaEnvio())
             {
                 MostrarAvisoDireccionFaltante();
