@@ -32,6 +32,12 @@ namespace SistemaFerreteriaV8.Clases
                     label.ForeColor = text;
                     label.BackColor = Color.Transparent;
                     label.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
+                    if (label.Text != null && label.Text.TrimEnd().EndsWith(":"))
+                    {
+                        label.AutoSize = false;
+                        label.TextAlign = ContentAlignment.MiddleRight;
+                        label.Width = Math.Max(label.Width, 140);
+                    }
                 }
                 else if (control is TextBox textBox)
                 {

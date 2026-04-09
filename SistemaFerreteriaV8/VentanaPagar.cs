@@ -87,7 +87,7 @@ namespace SistemaFerreteriaV8
                 case "Efectivo":
                     facturaActiva.Paga = true;
                     facturaActiva.MetodoDePago = "Efectivo";
-                    facturaActiva.Fecha = DateTime.UtcNow;
+                    facturaActiva.Fecha = DateTime.Now;
 
                     if (!string.IsNullOrEmpty(Efectivo.Text) && double.TryParse(Efectivo.Text, out double montoEfectivo))
                     {

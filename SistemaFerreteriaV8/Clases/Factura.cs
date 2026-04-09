@@ -250,7 +250,8 @@ namespace SistemaFerreteriaV8.Clases
             int pageNumber,
             int pageSize,
             string tipoFiltro = "",
-            string termino = "")
+            string termino = "",
+            bool incluirEliminadas = false)
         {
             if (pageNumber < 1) pageNumber = 1;
             if (pageSize < 1) pageSize = 20;
@@ -262,6 +263,9 @@ namespace SistemaFerreteriaV8.Clases
             var filter = filterBuilder.And(
                 filterBuilder.Gte(f => f.Fecha, fechaInicio),
                 filterBuilder.Lte(f => f.Fecha, fechaFin));
+
+            if (!incluirEliminadas)
+                filter &= filterBuilder.Eq(f => f.Eliminada, false);
 
             termino = termino?.Trim() ?? string.Empty;
 
@@ -315,6 +319,17 @@ namespace SistemaFerreteriaV8.Clases
             var filter = Builders<Factura>.Filter.Regex(clave, new BsonRegularExpression(valor, "i"));
             var facturas = await collection.Find(filter).ToListAsync();
             return facturas ?? new List<Factura>();
+        }
+
+        public static async Task<List<Factura>> ListarTodasAsync(bool incluirEliminadas = false)
+        {
+            var filter = incluirEliminadas
+                ? Builders<Factura>.Filter.Empty
+                : Builders<Factura>.Filter.Eq(f => f.Eliminada, false);
+
+            return await collection.Find(filter)
+                .SortByDescending(f => f.Fecha)
+                .ToListAsync();
         }
 
         public static async Task<(List<FacturaResumen>, double)> ListarFacturasCierre(string clave, string valor)

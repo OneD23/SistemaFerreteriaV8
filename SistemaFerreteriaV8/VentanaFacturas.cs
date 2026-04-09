@@ -46,6 +46,7 @@ namespace SistemaFerreteriaV8
         private bool isInitializing = true;
 
         private ProgressBar progressBarLoading;
+        private CheckBox chkMostrarEliminadas;
 
         public VentanaFacturas()
         {
@@ -66,6 +67,17 @@ namespace SistemaFerreteriaV8
 
             this.Controls.Add(progressBarLoading);
             this.Controls.SetChildIndex(progressBarLoading, 0);
+            chkMostrarEliminadas = new CheckBox
+            {
+                Text = "Mostrar eliminadas",
+                ForeColor = System.Drawing.Color.White,
+                BackColor = System.Drawing.Color.Transparent,
+                AutoSize = true,
+                Left = 390,
+                Top = 42
+            };
+            chkMostrarEliminadas.CheckedChanged += async (_, __) => await ReiniciarYRecargarAsync();
+            groupBox1.Controls.Add(chkMostrarEliminadas);
             ConfigurarVistaProfesional();
 
             button1.Click += async (_, __) => await CambiarPaginaAsync(-1);
@@ -118,7 +130,8 @@ namespace SistemaFerreteriaV8
                     currentPage,
                     pageSize,
                     tipoFiltro,
-                    termino);
+                    termino,
+                    chkMostrarEliminadas?.Checked == true);
 
                 var lista = resultado.Facturas;
                 var total = resultado.Total;
