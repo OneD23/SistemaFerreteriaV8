@@ -52,7 +52,14 @@ La autorización ya no se valida de forma dispersa en cada form. Se centraliza c
 - `PermissionAccess.EnsurePermissionAsync(...)`
 - `SecurityPrompt` para elevación controlada cuando el usuario activo no tiene permiso
 
+## Prioridad actual de autorización
+
+1. `permisosDeny` del usuario (bloquea siempre)
+2. `permisosAllow` del usuario
+3. permisos heredados por rol
+4. denegado por defecto
+
 ## Pendientes de migración
 
 - Expandir uso de permisos a inventario avanzado, reportes detallados, anulaciones y flujos de caja secundarios.
-- Guardar permisos explícitos por usuario (además de rol) para romper dependencia del rol fijo.
+- Agregar pantalla de administración para editar `permisosAllow`/`permisosDeny` por usuario.

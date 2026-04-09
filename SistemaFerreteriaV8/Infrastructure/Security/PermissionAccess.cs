@@ -26,7 +26,12 @@ public static class PermissionAccess
             _ => SystemRole.Unknown
         };
 
-        return AuthResult.Success(empleado.Id.ToString(), empleado.Nombre ?? string.Empty, role);
+        return AuthResult.Success(
+            empleado.Id.ToString(),
+            empleado.Nombre ?? string.Empty,
+            role,
+            empleado.PermisosAllow,
+            empleado.PermisosDeny);
     }
 
     public static async Task<bool> EnsurePermissionAsync(

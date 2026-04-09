@@ -9,8 +9,10 @@ Se movió lógica de negocio de cálculo/validación hacia `AppCore/Sales/SalesS
    - descuento (porcentaje o monto)
    - total neto
 
-2. **Validación mínima de venta cobrable/registrable**
-   - `CanCreateSale(...)` exige al menos una línea válida (cantidad > 0 y precio > 0).
+2. **Preparación y validación de venta**
+   - `PrepareSale(...)` valida líneas, normaliza datos y devuelve estructura lista para persistencia.
+   - valida stock por línea para productos no genéricos.
+   - identifica productos no encontrados para validación de inventario.
 
 ## Clases nuevas
 
@@ -25,15 +27,16 @@ Se movió lógica de negocio de cálculo/validación hacia `AppCore/Sales/SalesS
 - `AsignarTotales()` (delegando cálculo al servicio)
 - validar venta antes de registrar (`button18_Click`)
 - validar venta antes de cobrar (`Cobrar_Click`)
+- armar líneas de entrada hacia `SalePreparationRequest` y aplicar `SalePreparationResult`
 
 ## Beneficio inmediato
 
-- Reduce responsabilidad del formulario en reglas de negocio de ventas.
+- Reduce responsabilidad del formulario en reglas de negocio de ventas y consistencia de stock.
 - Facilita pruebas del cálculo sin depender de WinForms.
 - Prepara extracción de siguientes bloques (stock, preparación de factura, persistencia).
 
 ## Próximo bloque recomendado
 
-1. Extraer preparación de `Factura` a `SalesService` (`BuildSaleDraft`).
-2. Extraer validación de stock por línea.
-3. Centralizar reglas de cambio de precio y descuento por permiso.
+1. Extraer armado final de `Factura` persistible (`BuildInvoiceDraft`) para eliminar duplicación en `RegistrarFacturaAsync`.
+2. Mover validación de precios/cambio de precio completamente al servicio.
+3. Añadir test unitarios del `SalesService` (cálculo, stock, errores de línea).

@@ -47,6 +47,12 @@ public sealed class AuthorizationService : IAuthorizationService
         if (!authResult.IsAuthenticated || string.IsNullOrWhiteSpace(permission))
             return false;
 
+        if (authResult.UserDeniedPermissions.Contains(permission, StringComparer.OrdinalIgnoreCase))
+            return false;
+
+        if (authResult.UserAllowedPermissions.Contains(permission, StringComparer.OrdinalIgnoreCase))
+            return true;
+
         var granted = GetPermissions(authResult.Role);
         return granted.Contains(permission, StringComparer.OrdinalIgnoreCase);
     }

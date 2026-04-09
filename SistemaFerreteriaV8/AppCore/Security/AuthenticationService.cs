@@ -30,7 +30,12 @@ public sealed class AuthenticationService : IAuthenticationService
                 await _employeeRepository.UpdateAsync(employee);
             }
 
-            return AuthResult.Success(employee.Id.ToString(), employee.Nombre, ResolveRole(employee.Puesto));
+            return AuthResult.Success(
+                employee.Id.ToString(),
+                employee.Nombre,
+                ResolveRole(employee.Puesto),
+                employee.PermisosAllow,
+                employee.PermisosDeny);
         }
 
         var allEmployees = await _employeeRepository.ListAsync();
@@ -44,7 +49,12 @@ public sealed class AuthenticationService : IAuthenticationService
             return AuthResult.Fail("Credenciales inválidas.");
         }
 
-        return AuthResult.Success(hashedEmployee.Id.ToString(), hashedEmployee.Nombre, ResolveRole(hashedEmployee.Puesto));
+        return AuthResult.Success(
+            hashedEmployee.Id.ToString(),
+            hashedEmployee.Nombre,
+            ResolveRole(hashedEmployee.Puesto),
+            hashedEmployee.PermisosAllow,
+            hashedEmployee.PermisosDeny);
     }
 
     private static SystemRole ResolveRole(string? puesto)
