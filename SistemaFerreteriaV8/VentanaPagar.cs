@@ -89,7 +89,7 @@ namespace SistemaFerreteriaV8
             Cancelar.SetBounds(startX + (btnW + space) * 2, yBtns, btnW, 44);
         }
 
-        private static void ConfigCampo(Control label, Control input, int xLabel, int xInput, int wInput, int y, int h)
+        private static void ConfigCampo(Label label, Control input, int xLabel, int xInput, int wInput, int y, int h)
         {
             label.AutoSize = false;
             label.TextAlign = ContentAlignment.MiddleRight;

@@ -63,7 +63,7 @@ namespace SistemaFerreteriaV8
             Aceptar.SetBounds(startX + btnW + space, yBtns, btnW, 42);
         }
 
-        private static void ConfigCampo(Control label, Control input, int xLabel, int xInput, int wInput, int y, int h)
+        private static void ConfigCampo(Label label, Control input, int xLabel, int xInput, int wInput, int y, int h)
         {
             label.AutoSize = false;
             label.TextAlign = System.Drawing.ContentAlignment.MiddleRight;

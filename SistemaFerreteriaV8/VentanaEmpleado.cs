@@ -119,7 +119,7 @@ namespace SistemaFerreteriaV8
             }
         }
 
-        private static void ConfigurarCampo(Control label, Control input, int xLabel, int wLabel, int xInput, int wInput, int y, int h)
+        private static void ConfigurarCampo(Label label, Control input, int xLabel, int wLabel, int xInput, int wInput, int y, int h)
         {
             label.AutoSize = false;
             label.TextAlign = ContentAlignment.MiddleRight;
