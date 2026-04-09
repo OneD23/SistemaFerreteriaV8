@@ -24,6 +24,81 @@ namespace SistemaFerreteriaV8
         public VentanaPagar()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            AutoScroll = true;
+            MinimumSize = new Size(640, 620);
+            ModernizarUI();
+            Resize += (_, __) => ReorganizarLayout();
+        }
+
+        private void ModernizarUI()
+        {
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+
+            foreach (var btn in new[] { Pagar, Limpiar, Cancelar })
+            {
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+                btn.Height = 44;
+            }
+
+            foreach (var ctl in new Control[] { TipoFactura, MetodoPago, subTotal, Descuento, Total, Efectivo, Devuelta })
+                ctl.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+
+            ReorganizarLayout();
+        }
+
+        private void ReorganizarLayout()
+        {
+            int panelWidth = Math.Min(520, ClientSize.Width - 40);
+            int xLabel = (ClientSize.Width - panelWidth) / 2;
+            int xInput = xLabel + 150;
+            int wInput = panelWidth - 160;
+            int y = 56;
+            int h = 30;
+            int gap = 40;
+
+            label1.Left = (ClientSize.Width - label1.Width) / 2;
+            label1.Top = 20;
+
+            ConfigCampo(label8, TipoFactura, xLabel, xInput, wInput, y, h);
+            y += gap;
+
+            label9.Location = new Point(xLabel, y + 2);
+            Imprimir.Location = new Point(xInput, y + 2);
+            y += gap;
+
+            ConfigCampo(label2, subTotal, xLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigCampo(label3, Descuento, xLabel, xInput, wInput, y, h);
+            y += gap;
+            Total.Location = new Point(xInput, y);
+            Total.Size = new Size(wInput, h);
+            y += gap;
+            ConfigCampo(label4, MetodoPago, xLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigCampo(label5, Efectivo, xLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigCampo(label6, Devuelta, xLabel, xInput, wInput, y, h);
+
+            int yBtns = ClientSize.Height - 72;
+            int btnW = 130;
+            int space = 18;
+            int startX = (ClientSize.Width - (btnW * 3 + space * 2)) / 2;
+            Pagar.SetBounds(startX, yBtns, btnW, 44);
+            Limpiar.SetBounds(startX + btnW + space, yBtns, btnW, 44);
+            Cancelar.SetBounds(startX + (btnW + space) * 2, yBtns, btnW, 44);
+        }
+
+        private static void ConfigCampo(Label label, Control input, int xLabel, int xInput, int wInput, int y, int h)
+        {
+            label.AutoSize = false;
+            label.TextAlign = ContentAlignment.MiddleRight;
+            label.Location = new Point(xLabel, y);
+            label.Size = new Size(140, h);
+            input.Location = new Point(xInput, y);
+            input.Size = new Size(wInput, h);
         }
 
         private void VentanaPagar_Load(object sender, EventArgs e)
@@ -86,17 +161,24 @@ namespace SistemaFerreteriaV8
                 case "Efectivo":
                     facturaActiva.Paga = true;
                     facturaActiva.MetodoDePago = "Efectivo";
-                    facturaActiva.Fecha = DateTime.UtcNow;
+                    facturaActiva.Fecha = DateTime.Now;
 
                     if (!string.IsNullOrEmpty(Efectivo.Text) && double.TryParse(Efectivo.Text, out double montoEfectivo))
                     {
                         facturaActiva.Efectivo = montoEfectivo;
                     }
 
-                    if (ClienteActivo != null && ClienteActivo.CreditosActivo != null && ClienteActivo.CreditosActivo.Exists(m => m.Id == facturaActiva.Id))
+                    Cliente clienteCredito = null;
+                    if (!string.IsNullOrWhiteSpace(facturaActiva.IdCliente) && facturaActiva.IdCliente != "0")
+                        clienteCredito = await new Cliente().BuscarAsync(facturaActiva.IdCliente);
+
+                    if (clienteCredito == null)
+                        clienteCredito = ClienteActivo;
+
+                    if (clienteCredito != null && clienteCredito.CreditosActivo != null && clienteCredito.CreditosActivo.Exists(m => m.Id == facturaActiva.Id))
                     {
-                        ClienteActivo.CreditosActivo.RemoveAll(m => m.Id == facturaActiva.Id);
-                        await ClienteActivo.EditarAsync();
+                        clienteCredito.CreditosActivo.RemoveAll(m => m.Id == facturaActiva.Id);
+                        await clienteCredito.EditarAsync();
                     }
                     await facturaActiva.ActualizarFacturaAsync();
                     pagoProcesado = true;
@@ -146,7 +228,8 @@ namespace SistemaFerreteriaV8
                                 if (cliente.CreditosActivo == null)
                                     cliente.CreditosActivo = new List<Factura>();
 
-                                cliente.CreditosActivo.Add(facturaActiva);
+                                if (!cliente.CreditosActivo.Any(f => f.Id == facturaActiva.Id))
+                                    cliente.CreditosActivo.Add(facturaActiva);
                                 await cliente.EditarAsync();
 
                                 facturaActiva.Paga = false;
@@ -188,7 +271,7 @@ namespace SistemaFerreteriaV8
                         facturaActiva.GenerarFactura1();
                         break;
                 }
-                facturaActiva.RegistrarProductosAsync(1);
+                await facturaActiva.RegistrarProductosAsync(1);
 
                 var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
                 frm?.LimpiarTodo();

@@ -1,5 +1,6 @@
 ﻿using SistemaFerreteriaV8.Clases;
 using System;
+using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -11,6 +12,67 @@ namespace SistemaFerreteriaV8
         public VentanaRegistroCaja()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            AutoScroll = true;
+            MinimumSize = new Size(560, 470);
+            ModernizarUI();
+            Resize += (_, __) => ReorganizarLayout();
+        }
+
+        private void ModernizarUI()
+        {
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+
+            foreach (var btn in new[] { Aceptar, Cancelar })
+            {
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+                btn.Height = 42;
+            }
+
+            ReorganizarLayout();
+        }
+
+        private void ReorganizarLayout()
+        {
+            int panelWidth = Math.Min(430, ClientSize.Width - 36);
+            int xLabel = (ClientSize.Width - panelWidth) / 2;
+            int xInput = xLabel + 160;
+            int wInput = panelWidth - 168;
+            int y = 78;
+            int h = 30;
+            int gap = 46;
+
+            label1.Left = (ClientSize.Width - label1.Width) / 2;
+            label1.Top = 30;
+
+            Aviso.Left = (ClientSize.Width - Aviso.Width) / 2;
+            Aviso.Top = y;
+            y += 34;
+
+            ConfigCampo(label3, Codigo, xLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigCampo(label2, Balance, xLabel, xInput, wInput, y, h);
+            y += gap;
+            ConfigCampo(label4, turno, xLabel, xInput, wInput, y, h);
+
+            int yBtns = ClientSize.Height - 70;
+            int btnW = 130;
+            int space = 20;
+            int startX = (ClientSize.Width - ((btnW * 2) + space)) / 2;
+            Cancelar.SetBounds(startX, yBtns, btnW, 42);
+            Aceptar.SetBounds(startX + btnW + space, yBtns, btnW, 42);
+        }
+
+        private static void ConfigCampo(Label label, Control input, int xLabel, int xInput, int wInput, int y, int h)
+        {
+            label.AutoSize = false;
+            label.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            label.Location = new System.Drawing.Point(xLabel, y);
+            label.Size = new System.Drawing.Size(150, h);
+            input.Location = new System.Drawing.Point(xInput, y);
+            input.Size = new System.Drawing.Size(wInput, h);
         }
 
         private void label1_Click(object sender, EventArgs e)

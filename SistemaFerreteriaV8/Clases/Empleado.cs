@@ -39,6 +39,9 @@ namespace SistemaFerreteriaV8.Clases
         [BsonElement("fecha")]
         public DateTime Fecha { get; set; }
 
+        [BsonElement("sueldoMensual")]
+        public double SueldoMensual { get; set; }
+
         private static IMongoCollection<Empleado> EmpleadoCollection =>
             new MongoClient(new OneKeys().URI)
                 .GetDatabase(new OneKeys().DatabaseName)
