@@ -5,7 +5,7 @@ namespace SistemaFerreteriaV8.Infrastructure.Security;
 
 public sealed class EmployeeRepository : IEmployeeRepository
 {
-    public async Task<Empleado?> FindByPasswordAsync(string password)
+    public async Task<Empleado?> FindByPlainPasswordAsync(string password)
     {
         if (string.IsNullOrWhiteSpace(password))
         {
@@ -13,5 +13,15 @@ public sealed class EmployeeRepository : IEmployeeRepository
         }
 
         return await Empleado.BuscarPorClaveAsync("contrasena", password);
+    }
+
+    public async Task<IReadOnlyList<Empleado>> ListAsync()
+    {
+        return await Empleado.ListarAsync();
+    }
+
+    public async Task UpdateAsync(Empleado employee)
+    {
+        await employee.EditarAsync();
     }
 }

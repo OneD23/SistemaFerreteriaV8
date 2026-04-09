@@ -44,6 +44,22 @@ SistemaFerreteriaV8/
 - **Fail-safe defaults**: seguridad por defecto en acciones críticas.
 - **Observabilidad**: trazabilidad en caja, facturación y cierre.
 
+## Responsabilidades por capa
+
+- **UI / Forms**
+  - Renderizar pantallas, capturar interacción del usuario.
+  - No contener reglas de negocio ni acceso directo a Mongo.
+- **Application**
+  - Orquestar casos de uso (login, apertura/cierre de caja, venta, ajustes de precios, reportes).
+  - Validar reglas de flujo y permisos por operación.
+- **Domain**
+  - Modelos y reglas puras del negocio ferretero.
+  - Roles, permisos, resultados y políticas de seguridad.
+- **Infrastructure**
+  - Repositorios MongoDB, seguridad criptográfica, impresión, integraciones externas.
+- **Shared/Helpers**
+  - Logging, validación reusable, manejo estándar de errores/resultados.
+
 ## Flujos de alto impacto (target)
 
 ### 1) Autenticación y autorización
@@ -94,6 +110,13 @@ SistemaFerreteriaV8/
   - `AuthenticationService`
   - `Pbkdf2PasswordHasher`
   - `AuthResult`, `SystemRole`
+
+## Módulos candidatos para refactor inmediato
+
+1. **Login / autenticación / apertura de caja** (`VentanaRegistroCaja`, `Form1`, `VentanaPrecio`).
+2. **Ventas en caja** (`VentanaVentas`) por tamaño y concentración de lógica.
+3. **Datos de productos** (`Productos`) por creación de índices y rutas sync/async mezcladas.
+4. **Configuración de instancia** (`AppInstanceSettings`) por sensibilidad de `mongo_uri`.
 
 ## Qué no se cambia aún
 - No se modifica la UI de forma destructiva.

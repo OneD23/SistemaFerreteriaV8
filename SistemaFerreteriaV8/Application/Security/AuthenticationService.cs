@@ -21,24 +21,30 @@ public sealed class AuthenticationService : IAuthenticationService
             return AuthResult.Fail("Debe ingresar una clave.");
         }
 
-        var employee = await _employeeRepository.FindByPasswordAsync(password);
-        if (employee is null)
+        var employee = await _employeeRepository.FindByPlainPasswordAsync(password);
+        if (employee is not null)
         {
-            return AuthResult.Fail("Credenciales inválidas.");
-        }
+            if (!_passwordHasher.IsHash(employee.Contrasena))
+            {
+                employee.Contrasena = _passwordHasher.Hash(password);
+                await _employeeRepository.UpdateAsync(employee);
+            }
 
-        if (!_passwordHasher.IsHash(employee.Contrasena))
-        {
             return AuthResult.Success(employee.Id.ToString(), employee.Nombre, ResolveRole(employee.Puesto));
         }
 
-        var isValid = _passwordHasher.Verify(password, employee.Contrasena);
-        if (!isValid)
+        var allEmployees = await _employeeRepository.ListAsync();
+        var hashedEmployee = allEmployees.FirstOrDefault(e =>
+            !string.IsNullOrWhiteSpace(e.Contrasena) &&
+            _passwordHasher.IsHash(e.Contrasena) &&
+            _passwordHasher.Verify(password, e.Contrasena));
+
+        if (hashedEmployee is null)
         {
             return AuthResult.Fail("Credenciales inválidas.");
         }
 
-        return AuthResult.Success(employee.Id.ToString(), employee.Nombre, ResolveRole(employee.Puesto));
+        return AuthResult.Success(hashedEmployee.Id.ToString(), hashedEmployee.Nombre, ResolveRole(hashedEmployee.Puesto));
     }
 
     private static SystemRole ResolveRole(string? puesto)

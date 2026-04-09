@@ -4,5 +4,7 @@ namespace SistemaFerreteriaV8.Application.Abstractions;
 
 public interface IEmployeeRepository
 {
-    Task<Empleado?> FindByPasswordAsync(string password);
+    Task<Empleado?> FindByPlainPasswordAsync(string password);
+    Task<IReadOnlyList<Empleado>> ListAsync();
+    Task UpdateAsync(Empleado employee);
 }
