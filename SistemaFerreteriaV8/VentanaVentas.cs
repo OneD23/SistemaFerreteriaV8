@@ -1,5 +1,4 @@
 ﻿
-using DocumentFormat.OpenXml.Drawing;
 using Microsoft.VisualBasic;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -46,13 +45,13 @@ namespace SistemaFerreteriaV8
             {
                 lbl.AutoSize = false;
                 lbl.TextAlign = ContentAlignment.MiddleRight;
-                lbl.Location = new Point(xLabelInfo, lbl.Location.Y);
+                lbl.Location = new System.Drawing.Point(xLabelInfo, lbl.Location.Y);
                 lbl.Size = new Size(wLabelInfo, 24);
             }
 
-            IdCliente.Location = new Point(xInputInfo, IdCliente.Location.Y);
-            NombreCliente.Location = new Point(xInputInfo, NombreCliente.Location.Y);
-            tipoFactura.Location = new Point(xInputInfo, tipoFactura.Location.Y);
+            IdCliente.Location = new System.Drawing.Point(xInputInfo, IdCliente.Location.Y);
+            NombreCliente.Location = new System.Drawing.Point(xInputInfo, NombreCliente.Location.Y);
+            tipoFactura.Location = new System.Drawing.Point(xInputInfo, tipoFactura.Location.Y);
 
             // --- Opciones: Dirección / Nota ---
             int xLabelOpc = 20;
@@ -63,12 +62,12 @@ namespace SistemaFerreteriaV8
             {
                 lbl.AutoSize = false;
                 lbl.TextAlign = ContentAlignment.MiddleRight;
-                lbl.Location = new Point(xLabelOpc, lbl.Location.Y);
+                lbl.Location = new System.Drawing.Point(xLabelOpc, lbl.Location.Y);
                 lbl.Size = new Size(wLabelOpc, 24);
             }
 
-            direccion.Location = new Point(xInputOpc, direccion.Location.Y);
-            descripcion.Location = new Point(xInputOpc, descripcion.Location.Y);
+            direccion.Location = new System.Drawing.Point(xInputOpc, direccion.Location.Y);
+            descripcion.Location = new System.Drawing.Point(xInputOpc, descripcion.Location.Y);
             direccion.Width = groupBox3.Width - xInputOpc - 12;
             descripcion.Width = groupBox3.Width - xInputOpc - 12;
 
@@ -80,15 +79,15 @@ namespace SistemaFerreteriaV8
             {
                 lbl.AutoSize = false;
                 lbl.TextAlign = ContentAlignment.MiddleRight;
-                lbl.Location = new Point(xLabelTotales, lbl.Location.Y);
+                lbl.Location = new System.Drawing.Point(xLabelTotales, lbl.Location.Y);
                 lbl.Size = new Size(wLabelTotales, 24);
             }
 
-            SubTotal.Location = new Point(xValorTotales, SubTotal.Location.Y);
-            Descuento.Location = new Point(xValorTotales, Descuento.Location.Y);
-            Total.Location = new Point(xValorTotales, Total.Location.Y);
-            FiltroDescuento.Location = new Point(xValorTotales, FiltroDescuento.Location.Y);
-            ADescontar.Location = new Point(xValorTotales + 50, ADescontar.Location.Y);
+            SubTotal.Location = new System.Drawing.Point(xValorTotales, SubTotal.Location.Y);
+            Descuento.Location = new System.Drawing.Point(xValorTotales, Descuento.Location.Y);
+            Total.Location = new System.Drawing.Point(xValorTotales, Total.Location.Y);
+            FiltroDescuento.Location = new System.Drawing.Point(xValorTotales, FiltroDescuento.Location.Y);
+            ADescontar.Location = new System.Drawing.Point(xValorTotales + 50, ADescontar.Location.Y);
             ADescontar.Width = 120;
         }
 
