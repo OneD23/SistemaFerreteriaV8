@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualBasic;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Infrastructure.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -46,8 +47,9 @@ namespace SistemaFerreteriaV8
                         MessageBox.Show("Por favor, ingrese un valor numérico válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-                // Buscar la caja activa async (esto no bloquea el UI)
-                nueva = await Task.Run(() =>  Caja.BuscarPorClaveAsync("estado", "true"));
+                // Buscar la caja activa mediante servicio
+                var cashState = await AppServices.CashRegister.ValidateOpenStateAsync();
+                nueva = cashState.CajaActiva;
 
                 // Verificar si existe una caja activa
                 if (nueva == null)
@@ -105,8 +107,18 @@ namespace SistemaFerreteriaV8
         {
             try
             {
-                nueva.Estado = "false";
-                await Task.Run(() => nueva.EditarAsync());
+                var closeResult = await AppServices.CashRegister.CloseAsync(
+                    new CashRegisterCloseRequest(
+                        Usuario.Text,
+                        Registrado1,
+                        DateTime.Now));
+                if (!closeResult.Success)
+                {
+                    MessageBox.Show(closeResult.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                nueva = closeResult.CajaActiva;
                 var frm = WinFormsApp.OpenForms["Form1"] as Form1;
                 frm?.Dispose();
                 this.Dispose();

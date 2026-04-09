@@ -59,6 +59,45 @@ public sealed class SalesService : ISalesService
             totals);
     }
 
+    public InvoiceDraft BuildInvoiceDraft(SalePreparationResult preparation, InvoiceDraftMetadata metadata)
+    {
+        if (!preparation.IsValid)
+        {
+            var detail = string.Join("; ", preparation.Issues.Select(i => i.Message));
+            throw new InvalidOperationException($"No se puede construir factura persistible: {detail}");
+        }
+
+        if (metadata.InvoiceId <= 0)
+            throw new InvalidOperationException("InvoiceId inválido para persistencia.");
+
+        var lines = preparation.Lines.Select(line => new InvoiceDraftLine(
+            line.ProductId,
+            line.ProductName,
+            line.Quantity,
+            line.UnitPrice,
+            line.Quantity * line.UnitPrice,
+            line.IsGeneric)).ToList();
+
+        return new InvoiceDraft(
+            metadata.InvoiceId,
+            metadata.CustomerId,
+            metadata.CustomerName,
+            metadata.Rnc,
+            metadata.EmployeeId,
+            metadata.CompanyId,
+            metadata.InvoiceType,
+            metadata.Description,
+            metadata.Address,
+            metadata.SendByDelivery,
+            metadata.Paid,
+            metadata.CreatedAt,
+            preparation.Totals.Subtotal,
+            preparation.Totals.Discount,
+            preparation.Totals.Tax,
+            preparation.Totals.Total,
+            lines);
+    }
+
     public bool CanCreateSale(IEnumerable<SaleLineInput> lines)
     {
         return lines.Any(l => l.Quantity > 0 && l.UnitPrice > 0);
@@ -116,3 +155,44 @@ public sealed record SalePreparationResult(
     IReadOnlyCollection<SaleValidationIssue> Issues,
     IReadOnlyCollection<SaleLineInput> Lines,
     SalesTotals Totals);
+
+public sealed record InvoiceDraft(
+    int InvoiceId,
+    string CustomerId,
+    string CustomerName,
+    string Rnc,
+    string EmployeeId,
+    string CompanyId,
+    string InvoiceType,
+    string Description,
+    string Address,
+    bool SendByDelivery,
+    bool Paid,
+    DateTime CreatedAt,
+    double Subtotal,
+    double Discount,
+    double Tax,
+    double Total,
+    IReadOnlyCollection<InvoiceDraftLine> Lines);
+
+public sealed record InvoiceDraftLine(
+    string ProductId,
+    string ProductName,
+    double Quantity,
+    double UnitPrice,
+    double Subtotal,
+    bool IsGeneric);
+
+public sealed record InvoiceDraftMetadata(
+    int InvoiceId,
+    string CustomerId,
+    string CustomerName,
+    string Rnc,
+    string EmployeeId,
+    string CompanyId,
+    string InvoiceType,
+    string Description,
+    string Address,
+    bool SendByDelivery,
+    bool Paid,
+    DateTime CreatedAt);

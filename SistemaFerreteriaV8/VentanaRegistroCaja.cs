@@ -1,6 +1,7 @@
 ﻿using SistemaFerreteriaV8.Clases;
 using SistemaFerreteriaV8.Domain.Security;
 using SistemaFerreteriaV8.Infrastructure.Security;
+using SistemaFerreteriaV8.Infrastructure.Services;
 using System;
 using System.Drawing;
 using System.Linq;
@@ -90,11 +91,11 @@ namespace SistemaFerreteriaV8
 
         private async void VentanaRegistroCaja_Load(object sender, EventArgs e)
         {
-            Caja nuevaCaja = await  Caja.BuscarPorClaveAsync("estado", "true");
-            if (nuevaCaja != null)
+            var cashState = await AppServices.CashRegister.ValidateOpenStateAsync();
+            if (cashState.Success && cashState.CajaActiva != null)
             {
-                turno.Text = nuevaCaja.Turno;
-                Balance.Text = nuevaCaja.BalanceInicial.ToString();
+                turno.Text = cashState.CajaActiva.Turno;
+                Balance.Text = cashState.CajaActiva.BalanceInicial.ToString();
                 turno.Enabled = false;
                 Balance.Enabled = false;
             }
@@ -139,9 +140,8 @@ namespace SistemaFerreteriaV8
                 Puesto = auth.Role.ToString()
             };
 
-            // Buscar si ya hay una caja activa
-            var nuevaCaja = await Caja.BuscarPorClaveAsync("estado", "true");
-            if (nuevaCaja == null)
+            var cashState = await AppServices.CashRegister.ValidateOpenStateAsync();
+            if (!cashState.Success)
             {
                 if (!double.TryParse(Balance.Text, out var balanceInicial))
                 {
@@ -149,20 +149,18 @@ namespace SistemaFerreteriaV8
                     return;
                 }
 
-                nuevaCaja = new Caja
+                var openResult = await AppServices.CashRegister.OpenAsync(
+                    new CashRegisterOpenRequest(turno.Text, balanceInicial, empleado.Nombre));
+                if (!openResult.Success)
                 {
-                    Turno = turno.Text,
-                    Estado = "true",
-                    FechaApertura = DateTime.Now,
-                    BalanceInicial = balanceInicial,
-                    Usuario = empleado.Nombre
-                };
-                await nuevaCaja.CrearAsync();
+                    MessageBox.Show(openResult.Message, "Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
             }
             else
             {
-                turno.Text = nuevaCaja.Turno;
-                Balance.Text = nuevaCaja.BalanceInicial.ToString();
+                turno.Text = cashState.CajaActiva.Turno;
+                Balance.Text = cashState.CajaActiva.BalanceInicial.ToString();
                 turno.Enabled = false;
                 Balance.Enabled = false;
             }

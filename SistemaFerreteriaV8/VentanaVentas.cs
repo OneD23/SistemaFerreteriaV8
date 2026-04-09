@@ -249,41 +249,9 @@ namespace SistemaFerreteriaV8
 
 
         // 1. RegistrarFactura ahora como async Task, usando métodos async y evitando async void.
-        public async Task RegistrarFacturaAsync(bool paga)
+        public async Task<SalesWorkflowResult> RegistrarFacturaAsync(bool paga, SalePreparationResult preparation, bool isQuotation = false)
         {
-            if (facturaActiva == null) return;
-
-            // 1. Construir la lista de productos desde la DataGridView
-            var listaProducto = ListaDeCompras.Rows
-                .Cast<DataGridViewRow>()
-                .Where(row => row.Cells[0]?.Value != null)
-                .Select(row =>
-                {
-                    string nombre = row.Cells[0].Value.ToString();
-                    double cantidad = double.TryParse(row.Cells[4]?.Value?.ToString(), out var cant) ? cant : 0;
-                    double precio = double.TryParse(row.Cells[3]?.Value?.ToString(), out var prec) ? prec : 0;
-
-                    Productos producto;
-                    if (nombre == "Generico")
-                    {
-                        producto = new Productos
-                        {
-                            Nombre = "Generico",
-                            Precio = new List<double> { precio, precio, precio, precio }
-                        };
-                    }
-                    else
-                    {
-                        // Usamos la versión sync para no generar demasiada concurrencia en UI
-                        producto = new Productos().Buscar("nombre", nombre);
-                    }
-
-                    return producto != null
-                        ? new ListProduct { Producto = producto, Cantidad = cantidad, Precio = precio }
-                        : null;
-                })
-                .Where(lp => lp != null)
-                .ToList();
+            if (facturaActiva == null) return new SalesWorkflowResult(false, "No hay factura activa.");
 
             // 2. Obtener caja activa de forma asíncrona
             var cajaActiva = await  Caja.BuscarPorClaveAsync("estado", "true");
@@ -305,7 +273,7 @@ namespace SistemaFerreteriaV8
                         "Aviso",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
-                    return;
+                    return new SalesWorkflowResult(false, "ID de factura inválido para factura cargada.");
                 }
             }
             else if (idFactura <= 0)
@@ -315,35 +283,33 @@ namespace SistemaFerreteriaV8
 
             facturaActiva.Id = idFactura;
             NoFactura.Text = idFactura.ToString();
-            var factura = new Factura
-            {
-                Id = idFactura,
-                //ObjectId = facturaActiva.ObjectId,
-                NombreCliente = NombreCliente.Text,
-                NombreEmpresa = cajaActiva?.Id ?? "Empresa no definida",
-                RNC = IdCliente.Text,
-                IdCliente = IdCliente.Text,
-                Fecha = DateTime.Now,
-                IdEmpleado = empleado.Id.ToString(),
-                Productos = listaProducto,
-                Total = totalActivo,
-                Descuentos = descuentoActivo,
-                Description = descripcion.Text,
-                Direccion = direccion.Text.Trim(),
-                Paga = paga,
-                Enviar = N.Checked,
-                TipoFactura = tipoFactura.Text
-            };
 
-            // 4. Verificar si existe y usar async
-            var existente = await Factura.BuscarAsync(factura.Id);
+            var draft = AppServices.Sales.BuildInvoiceDraft(
+                preparation,
+                new InvoiceDraftMetadata(
+                    InvoiceId: idFactura,
+                    CustomerId: IdCliente.Text,
+                    CustomerName: NombreCliente.Text,
+                    Rnc: IdCliente.Text,
+                    EmployeeId: empleado.Id.ToString(),
+                    CompanyId: cajaActiva?.Id ?? "Empresa no definida",
+                    InvoiceType: tipoFactura.Text,
+                    Description: descripcion.Text,
+                    Address: direccion.Text.Trim(),
+                    SendByDelivery: N.Checked,
+                    Paid: paga,
+                    CreatedAt: DateTime.Now));
 
-            if (existente != null)
-                await factura.ActualizarFacturaAsync();
-            else
-                await factura.InsertarFacturaAsync();
+            var workflow = await AppServices.SalesWorkflow.ConfirmSaleAsync(new SalesWorkflowRequest(
+                Draft: draft,
+                ApplyStockMovement: !esCargada,
+                InvoiceType: tipoFactura.Text,
+                IsQuotation: isQuotation));
 
-            facturaActiva = factura;
+            if (workflow.Success && workflow.PersistedInvoice != null)
+                facturaActiva = workflow.PersistedInvoice;
+
+            return workflow;
         }
 
         // 2. AsignarTotales mantiene cálculos en UI thread
@@ -930,43 +896,48 @@ private void button10_Click(object sender, EventArgs e)
 
         #region Procesamiento de venta
 
-        private async void button18_Click(object sender, EventArgs e)
+        private async Task<SalePreparationResult?> ValidateAndPrepareSaleAsync(string actionLabel)
         {
-            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, "registrar venta"))
-                return;
+            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, actionLabel))
+                return null;
 
             var preparation = await BuildSalePreparationAsync();
             if (!preparation.IsValid)
             {
                 var details = string.Join(Environment.NewLine, preparation.Issues.Select(i => $"- {i.Message} ({i.Code})"));
-                MessageBox.Show($"No se puede registrar la venta:\n{details}", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                MessageBox.Show($"No se puede continuar:\n{details}", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return null;
             }
             ApplyTotals(preparation.Totals);
+            return preparation;
+        }
 
-            // Registrar productos en inventario si no está cargada
-            if (!esCargada && facturaActiva != null)
-                await facturaActiva.RegistrarProductosAsync(+1);
+        private async Task<bool> ExecuteSalePersistenceAsync(bool paid, SalePreparationResult preparation, bool isQuotation = false)
+        {
+            var result = await RegistrarFacturaAsync(paid, preparation, isQuotation);
+            if (!result.Success)
+            {
+                MessageBox.Show(result.Message, "Error de persistencia", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
 
-            // Registrar o actualizar la factura en BD
-            await RegistrarFacturaAsync(false);
+            return true;
+        }
 
+        private async void button18_Click(object sender, EventArgs e)
+        {
+            var preparation = await ValidateAndPrepareSaleAsync("registrar venta");
+            if (preparation == null) return;
+
+            if (!await ExecuteSalePersistenceAsync(false, preparation))
+                return;
             LimpiarTodo();
         }
 
         private async void Cobrar_Click(object sender, EventArgs e)
         {
-            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, "cobrar venta"))
-                return;
-
-            var preparation = await BuildSalePreparationAsync();
-            if (!preparation.IsValid)
-            {
-                var details = string.Join(Environment.NewLine, preparation.Issues.Select(i => $"- {i.Message} ({i.Code})"));
-                MessageBox.Show($"No se puede cobrar la venta:\n{details}", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            ApplyTotals(preparation.Totals);
+            var preparation = await ValidateAndPrepareSaleAsync("cobrar venta");
+            if (preparation == null) return;
 
             if (ValidarDireccionParaEnvio())
             {
@@ -974,8 +945,8 @@ private void button10_Click(object sender, EventArgs e)
                 return;
             }
 
-            // Registra la factura como pagada
-            await RegistrarFacturaAsync(true);
+            if (!await ExecuteSalePersistenceAsync(true, preparation))
+                return;
 
             // Abre ventana de pago con cliente y factura actual
             var ventanaPagar = new VentanaPagar
@@ -1011,6 +982,9 @@ private void button10_Click(object sender, EventArgs e)
         // Cobrar y registrar la factura; ahora async para await RegistrarFacturaAsync
         private async void button5_Click(object sender, EventArgs e)
         {
+            var preparation = await ValidateAndPrepareSaleAsync("generar factura");
+            if (preparation == null) return;
+
             Configuraciones confi = new Configuraciones().ObtenerPorId(1);
             if (confi != null)
             {
@@ -1028,8 +1002,8 @@ private void button10_Click(object sender, EventArgs e)
                 return;
             }
 
-            // Registrar o actualizar la factura en BD
-            await RegistrarFacturaAsync(true);
+            if (!await ExecuteSalePersistenceAsync(true, preparation))
+                return;
 
             // Restaurar UI
             label11.ForeColor = Color.White;
@@ -1231,8 +1205,12 @@ private void button10_Click(object sender, EventArgs e)
         /// </summary>
         public async Task CotizarAsync()
         {
+            var preparation = await ValidateAndPrepareSaleAsync("cotizar venta");
+            if (preparation == null) return;
+
             // Registra factura en BD sin marcarla pagada
-            await RegistrarFacturaAsync(false);
+            if (!await ExecuteSalePersistenceAsync(false, preparation, isQuotation: true))
+                return;
 
             // Reset UI
             label11.ForeColor = Color.White;
