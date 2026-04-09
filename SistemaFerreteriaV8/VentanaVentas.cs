@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static Org.BouncyCastle.Math.EC.ECCurve;
+using SistemaFerreteriaV8.Infrastructure.Security;
 
 namespace SistemaFerreteriaV8
 {
@@ -178,9 +179,15 @@ namespace SistemaFerreteriaV8
             bool puedeEditar = empleado?.Puesto == "Administrador";
             if (!puedeEditar)
             {
-                string clave = Interaction.InputBox("Necesita la clave del Administrador para editar");
-                var admin = await  Empleado.BuscarPorClaveAsync("contrasena", clave);
-                puedeEditar = admin?.Puesto == "Administrador";
+                string clave = SecurityPrompt.PromptPassword(
+                    "Necesita la clave del Administrador para editar.",
+                    "Autorización requerida");
+
+                if (!string.IsNullOrWhiteSpace(clave))
+                {
+                    var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(clave);
+                    puedeEditar = SecurityServices.AuthorizationService.IsAdmin(auth);
+                }
             }
 
             if (!puedeEditar)

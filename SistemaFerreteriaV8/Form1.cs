@@ -1,5 +1,5 @@
-﻿using Microsoft.VisualBasic;
-using SistemaFerreteriaV8.Clases;
+﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Infrastructure.Security;
 using System;
 using System.Linq;
 using System.Drawing;
@@ -172,9 +172,14 @@ namespace SistemaFerreteriaV8
             if (EmpleadoActivo != null && EmpleadoActivo.Puesto == "Administrador")
                 return true;
 
-            string codigo = Interaction.InputBox("Necesita la clave del Administrador para editar");
-            Empleado iban = await Empleado.BuscarPorClaveAsync("contrasena", codigo);
-            return iban != null && iban.Puesto == "Administrador";
+            string codigo = SecurityPrompt.PromptPassword(
+                "Necesita la clave de Administrador para continuar.",
+                "Autorización requerida");
+            if (string.IsNullOrWhiteSpace(codigo))
+                return false;
+
+            var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(codigo);
+            return SecurityServices.AuthorizationService.IsAdmin(auth);
         }
 
         // Si tienes algún timer descomenta esto y úsalo como necesitas

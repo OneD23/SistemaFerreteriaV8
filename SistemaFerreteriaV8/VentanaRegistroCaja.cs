@@ -1,4 +1,5 @@
 ﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Infrastructure.Security;
 using System;
 using System.Drawing;
 using System.Linq;
@@ -13,6 +14,7 @@ namespace SistemaFerreteriaV8
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            Codigo.UseSystemPasswordChar = true;
             AutoScroll = true;
             MinimumSize = new Size(560, 470);
             ModernizarUI();
@@ -112,50 +114,58 @@ namespace SistemaFerreteriaV8
 
         public async Task IniciarSeccionAsync()
         {
-            // Buscar empleado por contraseña
-            Empleado empleado = await Empleado.BuscarPorClaveAsync("contrasena", Codigo.Text);
-            if (empleado == null && Codigo.Text == "3322")
-            {
-                empleado = new Empleado() { Nombre = "OneD", Puesto = "Administrador" };
-            }
-            if (empleado != null || Codigo.Text == "3322")
-            {
-                // Buscar si ya hay una caja activa
-                var nuevaCaja = await  Caja.BuscarPorClaveAsync("estado", "true");
-                if (nuevaCaja == null)
-                {
-                    nuevaCaja = new Caja
-                    {
-                        
-                        Turno = turno.Text,
-                        Estado = "true",
-                        FechaApertura = DateTime.Now,
-                        BalanceInicial = !string.IsNullOrWhiteSpace(Balance.Text) ? double.Parse(Balance.Text) : 0,
-                        Usuario = empleado.Nombre
-                    };
-                    await nuevaCaja.CrearAsync();
-                }
-                else
-                {
-                    turno.Text = nuevaCaja.Turno;
-                    Balance.Text = nuevaCaja.BalanceInicial.ToString();
-                    turno.Enabled = false;
-                    Balance.Enabled = false;
-                }
-
-                // Asignar empleado activo en Form1 si está abierto
-                if (Application.OpenForms.OfType<Form1>().Any())
-                {
-                    Form1 frm = (Form1)Application.OpenForms["Form1"];
-                    frm.EmpleadoActivo = empleado;
-                }
-                this.Dispose();
-            }
-            else
+            var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(Codigo.Text);
+            if (!auth.IsAuthenticated)
             {
                 MessageBox.Show("Código incorrecto");
                 Codigo.Text = "";
+                return;
             }
+
+            var empleado = new Empleado
+            {
+                Id = MongoDB.Bson.ObjectId.TryParse(auth.EmployeeId, out var objectId)
+                    ? objectId
+                    : MongoDB.Bson.ObjectId.GenerateNewId(),
+                Nombre = auth.EmployeeName,
+                Puesto = auth.Role.ToString()
+            };
+
+            // Buscar si ya hay una caja activa
+            var nuevaCaja = await Caja.BuscarPorClaveAsync("estado", "true");
+            if (nuevaCaja == null)
+            {
+                if (!double.TryParse(Balance.Text, out var balanceInicial))
+                {
+                    MessageBox.Show("El balance inicial no es válido.");
+                    return;
+                }
+
+                nuevaCaja = new Caja
+                {
+                    Turno = turno.Text,
+                    Estado = "true",
+                    FechaApertura = DateTime.Now,
+                    BalanceInicial = balanceInicial,
+                    Usuario = empleado.Nombre
+                };
+                await nuevaCaja.CrearAsync();
+            }
+            else
+            {
+                turno.Text = nuevaCaja.Turno;
+                Balance.Text = nuevaCaja.BalanceInicial.ToString();
+                turno.Enabled = false;
+                Balance.Enabled = false;
+            }
+
+            // Asignar empleado activo en Form1 si está abierto
+            if (Application.OpenForms.OfType<Form1>().Any())
+            {
+                Form1 frm = (Form1)Application.OpenForms["Form1"];
+                frm.EmpleadoActivo = empleado;
+            }
+            this.Dispose();
         }
     }
 }
