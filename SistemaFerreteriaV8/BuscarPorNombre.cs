@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Office2016.Drawing.Command;
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Driver;
 using SistemaFerreteriaV8.Clases;
 using System;
@@ -32,49 +31,75 @@ namespace SistemaFerreteriaV8
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            ModernizarUI();
+            Resize += (_, __) => ReorganizarLayout();
+        }
+
+        private void ModernizarUI()
+        {
+            FormBorderStyle = FormBorderStyle.SizableToolWindow;
+            MinimumSize = new Size(760, 300);
+
+            ListaProductos.BorderStyle = BorderStyle.None;
+            ListaProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            ListaProductos.RowHeadersVisible = false;
+            ListaProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            ListaProductos.MultiSelect = false;
+            ListaProductos.EnableHeadersVisualStyles = false;
+            ListaProductos.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(24, 36, 60);
+            ListaProductos.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            ListaProductos.DefaultCellStyle.BackColor = Color.FromArgb(64, 85, 122);
+            ListaProductos.DefaultCellStyle.ForeColor = Color.White;
+            ListaProductos.DefaultCellStyle.SelectionBackColor = Color.FromArgb(46, 74, 125);
+            ListaProductos.DefaultCellStyle.SelectionForeColor = Color.White;
+
+            label1.Text = "Buscar producto:";
+            label1.AutoSize = true;
+            label2.Visible = false;
+
+            textBox1.Font = new Font("Segoe UI", 10F);
+            textBox1.BorderStyle = BorderStyle.FixedSingle;
+
+            ReorganizarLayout();
+        }
+
+        private void ReorganizarLayout()
+        {
+            const int margen = 12;
+            label1.Location = new Point(margen, margen);
+            textBox1.Location = new Point(label1.Right + 10, margen - 2);
+            textBox1.Size = new Size(Math.Min(320, ClientSize.Width - textBox1.Left - margen), 28);
+
+            ListaProductos.Location = new Point(margen, textBox1.Bottom + 12);
+            ListaProductos.Size = new Size(ClientSize.Width - (margen * 2), ClientSize.Height - ListaProductos.Top - margen);
+        }
+
+        private void CargarProductos(string textoBusqueda)
+        {
+            ListaProductos.Rows.Clear();
+            var collection = new MongoClient(new OneKeys().URI)
+                .GetDatabase(new OneKeys().DatabaseName)
+                .GetCollection<Productos>("Productos");
+
+            var filtro = Builders<Productos>.Filter.And(
+                Builders<Productos>.Filter.Regex("Nombre", new BsonRegularExpression(textoBusqueda, "i")),
+                Builders<Productos>.Filter.Ne("Nombre", "Generico")
+            );
+
+            var productos = collection.Find(filtro).ToList();
+            foreach (var producto in productos)
+            {
+                var precioVisual = (producto.Precio != null && producto.Precio.Count > 0)
+                    ? producto.Precio[Math.Min(precio, producto.Precio.Count - 1)]
+                    : 0;
+
+                ListaProductos.Rows.Add(producto.Id, producto.Nombre, producto.Marca, precioVisual.ToString("C2"));
+            }
         }
 
         private void BuscarPorNombre_Load(object sender, EventArgs e)
         {
-            // Limpiar la tabla antes de llenarla
-            ListaProductos.Rows.Clear();
-
-            // Convertir el texto de búsqueda a minúsculas
-            string textoBusqueda = "Cem";
-
-                // Configurar el cliente de MongoDB
-
-                var collection = new MongoClient(new OneKeys().URI).GetDatabase(new OneKeys().DatabaseName).GetCollection<Productos>("Productos");
-
-                // Crear un filtro para buscar nombres que contengan el texto ingresado, ignorando "Generico"
-                var filtro = Builders<Productos>.Filter.And(
-                    Builders<Productos>.Filter.Regex("Nombre", new BsonRegularExpression(textoBusqueda, "i")), // "i" -> Insensible a mayúsculas/minúsculas
-                    Builders<Productos>.Filter.Ne("Nombre", "Generico") // Excluir "Generico"
-                );
-
-                // Definir una proyección para recuperar solo los campos necesarios
-                var proyeccion = Builders<Productos>.Projection
-                    .Include("nombre")
-                    .Include("descripcion")
-                    .Include("marca")
-                    .Include("precio")
-                    .Include("_id"); // Excluir el campo "_id" si no es necesario
-
-                // Consultar MongoDB con filtro y proyección
-                var productos = collection.Find(filtro).Project(proyeccion).ToList();
-
-                // Rellenar la tabla con los resultados
-                foreach (var producto in productos)
-                {
-                    ListaProductos.Rows.Add(
-                        producto.GetValue("_id", ""),
-                        producto.GetValue("nombre", ""),
-                        producto.GetValue("descripcion", ""),
-                        producto.GetValue("marca", ""),
-                        producto.GetValue("precio", 0)[0]
-                    );
-                }
-            
+            CargarProductos(textBox1.Text?.Trim() ?? string.Empty);
         }
 
 
@@ -110,47 +135,7 @@ namespace SistemaFerreteriaV8
 
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
-            // Limpiar la tabla antes de llenarla
-            ListaProductos.Rows.Clear();
-
-            if (!string.IsNullOrEmpty(textBox1.Text))
-            {
-                // Convertir el texto de búsqueda a minúsculas
-                string textoBusqueda = textBox1.Text.ToLower();
-
-                // Configurar el cliente de MongoDB
-               
-                var collection = new MongoClient(new OneKeys().URI).GetDatabase(new OneKeys().DatabaseName).GetCollection<Productos>("Productos");
-
-                // Crear un filtro para buscar nombres que contengan el texto ingresado, ignorando "Generico"
-                var filtro = Builders<Productos>.Filter.And(
-                    Builders<Productos>.Filter.Regex("Nombre", new BsonRegularExpression(textoBusqueda, "i")), // "i" -> Insensible a mayúsculas/minúsculas
-                    Builders<Productos>.Filter.Ne("Nombre", "Generico") // Excluir "Generico"
-                );
-
-                // Definir una proyección para recuperar solo los campos necesarios
-                var proyeccion = Builders<Productos>.Projection
-                    .Include("nombre")
-                    .Include("descripcion")
-                    .Include("marca")
-                    .Include("precio")
-                    .Include("_id"); // Excluir el campo "_id" si no es necesario
-
-                // Consultar MongoDB con filtro y proyección
-                var productos = collection.Find(filtro).Project(proyeccion).ToList();
-
-                // Rellenar la tabla con los resultados
-                foreach (var producto in productos)
-                {
-                    ListaProductos.Rows.Add(
-                        producto.GetValue("_id", ""),
-                        producto.GetValue("nombre", ""),
-                        producto.GetValue("descripcion", ""),
-                        producto.GetValue("marca", ""),
-                        producto.GetValue("precio", 0)
-                    );
-                }
-            }
+            CargarProductos(textBox1.Text?.Trim() ?? string.Empty);
         }
 
         private void ListaProductos_KeyDown(object sender, KeyEventArgs e)

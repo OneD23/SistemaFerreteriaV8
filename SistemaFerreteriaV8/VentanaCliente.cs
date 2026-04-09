@@ -39,34 +39,31 @@ namespace SistemaFerreteriaV8
             int wLabel = 120;
             int xInput = 145;
             int inputWidth = 240;
+            int y = 36;
+            int gap = 34;
 
             foreach (var lbl in new[] { label5, label1, label2, label4, label3, label7, label6, label8 })
             {
                 lbl.AutoSize = false;
                 lbl.TextAlign = ContentAlignment.MiddleRight;
-                lbl.Location = new Point(xLabel, lbl.Location.Y);
+                lbl.Location = new Point(xLabel, y);
                 lbl.Size = new Size(wLabel, 24);
+                y += gap;
             }
 
-            Id.Location = new Point(xInput, Id.Location.Y);
-            Nombre.Location = new Point(xInput, Nombre.Location.Y);
-            Cedula.Location = new Point(xInput, Cedula.Location.Y);
-            Direccion.Location = new Point(xInput, Direccion.Location.Y);
-            Telefono.Location = new Point(xInput, Telefono.Location.Y);
-            Correo.Location = new Point(xInput, Correo.Location.Y);
-            LimiteCredito.Location = new Point(xInput, LimiteCredito.Location.Y);
-            CreditoActivo2.Location = new Point(xInput, CreditoActivo2.Location.Y);
+            y = 34;
+            foreach (var input in new Control[] { Id, Nombre, Cedula, Direccion, Telefono, Correo, LimiteCredito, CreditoActivo2 })
+            {
+                input.Location = new Point(xInput, y);
+                input.Size = new Size(inputWidth, 24);
+                y += gap;
+            }
 
             Id.Width = 140;
-            Nombre.Width = inputWidth;
-            Cedula.Width = inputWidth;
-            Direccion.Width = inputWidth;
-            Telefono.Width = inputWidth;
-            Correo.Width = inputWidth;
-            LimiteCredito.Width = inputWidth;
-            CreditoActivo2.Width = inputWidth;
+            foreach (var input in new Control[] { Nombre, Cedula, Direccion, Telefono, Correo, LimiteCredito, CreditoActivo2 })
+                input.Width = inputWidth;
 
-            button1.Location = new Point(xInput + inputWidth - 90, button1.Location.Y);
+            button1.Location = new Point(xInput + Id.Width + 10, Id.Top);
             button1.Width = 90;
 
             ListaDeClientes.Location = new Point(10, 22);

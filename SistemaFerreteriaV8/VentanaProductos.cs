@@ -28,6 +28,7 @@ namespace SistemaFerreteriaV8
             InitializeComponent();
             AplicarTemaProfesional();
             OrganizarLayoutProfesional();
+            Resize += (_, __) => OrganizarLayoutProfesional();
         }
         private void AplicarTemaProfesional()
         {
@@ -155,13 +156,14 @@ namespace SistemaFerreteriaV8
         private void OrganizarLayoutProfesional()
         {
             FormBorderStyle = FormBorderStyle.None;
-            ClientSize = new Size(1284, 770);
+            if (ClientSize.Width < 1100 || ClientSize.Height < 700)
+                ClientSize = new Size(1284, 770);
 
             groupBox1.Location = new Point(20, 20);
             groupBox1.Size = new Size(370, 730);
 
             groupBox2.Location = new Point(405, 20);
-            groupBox2.Size = new Size(860, 730);
+            groupBox2.Size = new Size(Math.Max(780, ClientSize.Width - 425), 730);
 
             label8.Location = new Point(102, 30);
             label8.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
@@ -239,12 +241,16 @@ namespace SistemaFerreteriaV8
             label9.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
 
             comboBox1.Location = new Point(18, 74);
-            comboBox1.Size = new Size(145, 25);
-            textBox1.Location = new Point(170, 74);
-            textBox1.Size = new Size(300, 25);
+            comboBox1.Size = new Size(140, 28);
+            textBox1.Location = new Point(165, 74);
+            textBox1.Size = new Size(250, 28);
+            button1.Location = new Point(groupBox2.Width - 295, 74);
+            button1.Size = new Size(132, 30);
+            button3.Location = new Point(groupBox2.Width - 156, 74);
+            button3.Size = new Size(132, 30);
 
             ListaProductos.Location = new Point(18, 110);
-            ListaProductos.Size = new Size(825, 455);
+            ListaProductos.Size = new Size(groupBox2.Width - 35, 455);
 
             Lugar.Location = new Point(350, 575);
             button5.Location = new Point(165, 600);
