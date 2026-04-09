@@ -31,6 +31,7 @@ namespace SistemaFerreteriaV8
         public BuscarPorNombre()
         {
             InitializeComponent();
+            SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
         }
 
         private void BuscarPorNombre_Load(object sender, EventArgs e)
