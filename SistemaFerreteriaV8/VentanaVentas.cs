@@ -286,8 +286,26 @@ namespace SistemaFerreteriaV8
             int idFactura = facturaActiva?.Id ?? 0;
             if (idFactura <= 0 && int.TryParse(NoFactura.Text, out var idTmp))
                 idFactura = idTmp;
-            if (idFactura <= 0)
+
+            // IMPORTANTE:
+            // Si la factura fue cargada para edición/reimpresión, nunca debe generar un nuevo ID.
+            // Así evitamos que al reimprimir se incremente la secuencia de facturas.
+            if (esCargada)
+            {
+                if (idFactura <= 0)
+                {
+                    MessageBox.Show(
+                        "No se pudo determinar el ID de la factura cargada. Vuelva a abrir la factura antes de reimprimir.",
+                        "Aviso",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            else if (idFactura <= 0)
+            {
                 idFactura = Factura.GenerarSiguienteId();
+            }
 
             facturaActiva.Id = idFactura;
             NoFactura.Text = idFactura.ToString();
