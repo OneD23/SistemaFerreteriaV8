@@ -16,10 +16,27 @@ namespace SistemaFerreteriaV8
         public Empleado empleado { get; set; }
         Form formActivado = null;
         public List<Productos> listaProductos {  get; set; }
+        private Button btnTendencia;
         public Contabilidad()
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            InicializarBotonTendencia();
+        }
+        private void InicializarBotonTendencia()
+        {
+            btnTendencia = new Button
+            {
+                Text = "Tendencia / Gastos",
+                Size = new Size(180, 42),
+                Location = new Point(620, 12),
+                BackColor = Color.FromArgb(255, 137, 0),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnTendencia.FlatAppearance.BorderSize = 0;
+            btnTendencia.Click += (_, __) => AbrirFormulario(new VentanaTendenciaGastos());
+            panel1.Controls.Add(btnTendencia);
         }
         public void AbrirFormulario(Form hijo)
         {
@@ -52,7 +69,7 @@ namespace SistemaFerreteriaV8
         }
         private void Contabilidad_Load(object sender, EventArgs e)
         {
-           // AbrirFormulario(new VentanaEstadisticas() { listaProductos = listaProductos });
+            AbrirFormulario(new VentanaTendenciaGastos());
         }
         private void Centro_Paint(object sender, PaintEventArgs e)
         {

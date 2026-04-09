@@ -94,10 +94,17 @@ namespace SistemaFerreteriaV8
                         facturaActiva.Efectivo = montoEfectivo;
                     }
 
-                    if (ClienteActivo != null && ClienteActivo.CreditosActivo != null && ClienteActivo.CreditosActivo.Exists(m => m.Id == facturaActiva.Id))
+                    Cliente clienteCredito = null;
+                    if (!string.IsNullOrWhiteSpace(facturaActiva.IdCliente) && facturaActiva.IdCliente != "0")
+                        clienteCredito = await new Cliente().BuscarAsync(facturaActiva.IdCliente);
+
+                    if (clienteCredito == null)
+                        clienteCredito = ClienteActivo;
+
+                    if (clienteCredito != null && clienteCredito.CreditosActivo != null && clienteCredito.CreditosActivo.Exists(m => m.Id == facturaActiva.Id))
                     {
-                        ClienteActivo.CreditosActivo.RemoveAll(m => m.Id == facturaActiva.Id);
-                        await ClienteActivo.EditarAsync();
+                        clienteCredito.CreditosActivo.RemoveAll(m => m.Id == facturaActiva.Id);
+                        await clienteCredito.EditarAsync();
                     }
                     await facturaActiva.ActualizarFacturaAsync();
                     pagoProcesado = true;
@@ -147,7 +154,8 @@ namespace SistemaFerreteriaV8
                                 if (cliente.CreditosActivo == null)
                                     cliente.CreditosActivo = new List<Factura>();
 
-                                cliente.CreditosActivo.Add(facturaActiva);
+                                if (!cliente.CreditosActivo.Any(f => f.Id == facturaActiva.Id))
+                                    cliente.CreditosActivo.Add(facturaActiva);
                                 await cliente.EditarAsync();
 
                                 facturaActiva.Paga = false;
@@ -189,7 +197,7 @@ namespace SistemaFerreteriaV8
                         facturaActiva.GenerarFactura1();
                         break;
                 }
-                facturaActiva.RegistrarProductosAsync(1);
+                await facturaActiva.RegistrarProductosAsync(1);
 
                 var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
                 frm?.LimpiarTodo();
