@@ -1,9 +1,8 @@
 ﻿
 using Microsoft.VisualBasic;
-using MongoDB.Bson;
-using MongoDB.Driver;
 using Octetus.ConsultasDgii.Services;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Domain.Security;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,6 +12,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static Org.BouncyCastle.Math.EC.ECCurve;
+using SistemaFerreteriaV8.Infrastructure.Security;
+using SistemaFerreteriaV8.Infrastructure.Services;
+using SistemaFerreteriaV8.AppCore.Sales;
+using SistemaFerreteriaV8.AppCore.Abstractions;
 
 namespace SistemaFerreteriaV8
 {
@@ -178,9 +181,11 @@ namespace SistemaFerreteriaV8
             bool puedeEditar = empleado?.Puesto == "Administrador";
             if (!puedeEditar)
             {
-                string clave = Interaction.InputBox("Necesita la clave del Administrador para editar");
-                var admin = await  Empleado.BuscarPorClaveAsync("contrasena", clave);
-                puedeEditar = admin?.Puesto == "Administrador";
+                puedeEditar = await PermissionAccess.EnsurePermissionAsync(
+                    empleado,
+                    AppPermissions.VentasCancelar,
+                    this,
+                    "editar una factura");
             }
 
             if (!puedeEditar)
@@ -243,41 +248,9 @@ namespace SistemaFerreteriaV8
 
 
         // 1. RegistrarFactura ahora como async Task, usando métodos async y evitando async void.
-        public async Task RegistrarFacturaAsync(bool paga)
+        public async Task<SalesWorkflowResult> RegistrarFacturaAsync(bool paga, SalePreparationResult preparation, bool isQuotation = false)
         {
-            if (facturaActiva == null) return;
-
-            // 1. Construir la lista de productos desde la DataGridView
-            var listaProducto = ListaDeCompras.Rows
-                .Cast<DataGridViewRow>()
-                .Where(row => row.Cells[0]?.Value != null)
-                .Select(row =>
-                {
-                    string nombre = row.Cells[0].Value.ToString();
-                    double cantidad = double.TryParse(row.Cells[4]?.Value?.ToString(), out var cant) ? cant : 0;
-                    double precio = double.TryParse(row.Cells[3]?.Value?.ToString(), out var prec) ? prec : 0;
-
-                    Productos producto;
-                    if (nombre == "Generico")
-                    {
-                        producto = new Productos
-                        {
-                            Nombre = "Generico",
-                            Precio = new List<double> { precio, precio, precio, precio }
-                        };
-                    }
-                    else
-                    {
-                        // Usamos la versión sync para no generar demasiada concurrencia en UI
-                        producto = new Productos().Buscar("nombre", nombre);
-                    }
-
-                    return producto != null
-                        ? new ListProduct { Producto = producto, Cantidad = cantidad, Precio = precio }
-                        : null;
-                })
-                .Where(lp => lp != null)
-                .ToList();
+            if (facturaActiva == null) return new SalesWorkflowResult(false, "No hay factura activa.");
 
             // 2. Obtener caja activa de forma asíncrona
             var cajaActiva = await  Caja.BuscarPorClaveAsync("estado", "true");
@@ -299,7 +272,7 @@ namespace SistemaFerreteriaV8
                         "Aviso",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
-                    return;
+                    return new SalesWorkflowResult(false, "ID de factura inválido para factura cargada.");
                 }
             }
             else if (idFactura <= 0)
@@ -309,61 +282,63 @@ namespace SistemaFerreteriaV8
 
             facturaActiva.Id = idFactura;
             NoFactura.Text = idFactura.ToString();
-            var factura = new Factura
-            {
-                Id = idFactura,
-                //ObjectId = facturaActiva.ObjectId,
-                NombreCliente = NombreCliente.Text,
-                NombreEmpresa = cajaActiva?.Id ?? "Empresa no definida",
-                RNC = IdCliente.Text,
-                IdCliente = IdCliente.Text,
-                Fecha = DateTime.Now,
-                IdEmpleado = empleado.Id.ToString(),
-                Productos = listaProducto,
-                Total = totalActivo,
-                Descuentos = descuentoActivo,
-                Description = descripcion.Text,
-                Direccion = direccion.Text.Trim(),
-                Paga = paga,
-                Enviar = N.Checked,
-                TipoFactura = tipoFactura.Text
-            };
 
-            // 4. Verificar si existe y usar async
-            var existente = await Factura.BuscarAsync(factura.Id);
+            var draft = AppServices.Sales.BuildInvoiceDraft(
+                preparation,
+                new InvoiceDraftMetadata(
+                    InvoiceId: idFactura,
+                    CustomerId: IdCliente.Text,
+                    CustomerName: NombreCliente.Text,
+                    Rnc: IdCliente.Text,
+                    EmployeeId: empleado.Id.ToString(),
+                    CompanyId: cajaActiva?.Id ?? "Empresa no definida",
+                    InvoiceType: tipoFactura.Text,
+                    Description: descripcion.Text,
+                    Address: direccion.Text.Trim(),
+                    SendByDelivery: N.Checked,
+                    Paid: paga,
+                    CreatedAt: DateTime.Now));
 
-            if (existente != null)
-                await factura.ActualizarFacturaAsync();
-            else
-                await factura.InsertarFacturaAsync();
+            var workflow = await AppServices.SalesWorkflow.ConfirmSaleAsync(new SalesWorkflowRequest(
+                Draft: draft,
+                ApplyStockMovement: !esCargada,
+                InvoiceType: tipoFactura.Text,
+                IsQuotation: isQuotation));
 
-            facturaActiva = factura;
+            if (workflow.Success && workflow.PersistedInvoice != null)
+                facturaActiva = workflow.PersistedInvoice;
+
+            return workflow;
         }
 
         // 2. AsignarTotales mantiene cálculos en UI thread
         public void AsignarTotales()
         {
-            double subtotal = 0;
-            foreach (DataGridViewRow row in ListaDeCompras.Rows)
-            {
-                if (row.Cells[5]?.Value != null && double.TryParse(row.Cells[5].Value.ToString(), out var val))
-                    subtotal += val;
-            }
+            var lines = ListaDeCompras.Rows
+                .Cast<DataGridViewRow>()
+                .Where(r => r.Cells[4]?.Value != null && r.Cells[3]?.Value != null)
+                .Select(r =>
+                {
+                    var productName = r.Cells[0]?.Value?.ToString() ?? "SinNombre";
+                    double.TryParse(r.Cells[4].Value?.ToString(), out var qty);
+                    double.TryParse(r.Cells[3].Value?.ToString(), out var price);
+                    return new SaleLineInput(
+                        ProductId: string.Empty,
+                        ProductName: productName,
+                        Quantity: qty,
+                        UnitPrice: price,
+                        AvailableStock: double.MaxValue,
+                        ProductFound: true,
+                        IsGeneric: productName.Equals("Generico", StringComparison.OrdinalIgnoreCase));
+                })
+                .ToList();
 
-            totalActivo = subtotal;
-            if (double.TryParse(ADescontar.Text.Replace("$", ""), out var dto))
-            {
-                descuentoActivo = (FiltroDescuento.SelectedIndex == 0)
-                    ? subtotal * (dto / 100.0)
-                    : dto;
-            }
-            else
-            {
-                descuentoActivo = 0;
-            }
+            var totals = AppServices.Sales.CalculateTotals(
+                lines,
+                ADescontar.Text,
+                FiltroDescuento.SelectedIndex == 0);
 
-            // Actualizar UI
-            ActualizarTotalesUI(subtotal);
+            ApplyTotals(totals);
         }
 
         // 3. ActualizarTotalesUI simplificado
@@ -372,6 +347,57 @@ namespace SistemaFerreteriaV8
             SubTotal.Text = subtotal.ToString("C2");
             Descuento.Text = descuentoActivo.ToString("C2");
             Total.Text = (subtotal - descuentoActivo).ToString("C2");
+        }
+
+        private void ApplyTotals(SalesTotals totals)
+        {
+            totalActivo = totals.Subtotal;
+            descuentoActivo = totals.Discount;
+            SubTotal.Text = totals.Subtotal.ToString("C2");
+            Descuento.Text = totals.Discount.ToString("C2");
+            Total.Text = totals.Total.ToString("C2");
+        }
+
+        private async Task<SalePreparationResult> BuildSalePreparationAsync()
+        {
+            var lines = new List<SaleLineInput>();
+
+            foreach (DataGridViewRow row in ListaDeCompras.Rows)
+            {
+                var productName = row.Cells[0]?.Value?.ToString();
+                if (string.IsNullOrWhiteSpace(productName))
+                    continue;
+
+                double.TryParse(row.Cells[4]?.Value?.ToString(), out var qty);
+                double.TryParse(row.Cells[3]?.Value?.ToString(), out var price);
+
+                var isGeneric = productName.Equals("Generico", StringComparison.OrdinalIgnoreCase);
+                double stock = double.MaxValue;
+                bool found = true;
+                string productId = string.Empty;
+
+                if (!isGeneric)
+                {
+                    var lookup = await AppServices.Product.FindByNameAsync(productName);
+                    found = lookup.Found && lookup.Product != null;
+                    stock = lookup.Product?.Cantidad ?? 0;
+                    productId = lookup.Product?.Id ?? string.Empty;
+                }
+
+                lines.Add(new SaleLineInput(
+                    ProductId: productId,
+                    ProductName: productName,
+                    Quantity: qty,
+                    UnitPrice: price,
+                    AvailableStock: stock,
+                    ProductFound: found,
+                    IsGeneric: isGeneric));
+            }
+
+            return AppServices.Sales.PrepareSale(new SalePreparationRequest(
+                lines,
+                ADescontar.Text,
+                FiltroDescuento.SelectedIndex == 0));
         }
 
         // 4. DetectaProducto ahora async Task (si necesitas buscar en BD async)
@@ -390,8 +416,8 @@ namespace SistemaFerreteriaV8
             }
             else
             {
-                // Si tu método BuscarAsync existe, úsalo; si no, déjalo sync.
-                producto = await  Productos.BuscarAsync(codigo);
+                var lookup = await AppServices.Product.FindByIdAsync(codigo);
+                producto = lookup.Product;
             }
 
             if (producto != null)
@@ -614,7 +640,8 @@ private void button10_Click(object sender, EventArgs e)
             if (string.IsNullOrEmpty(nombre)) return;
 
             // Buscar el producto de forma asíncrona
-            var producto = await  Productos.BuscarPorClaveAsync("nombre", nombre);
+            var lookupPrecio = await AppServices.Product.FindByNameAsync(nombre);
+            var producto = lookupPrecio.Product;
             if (producto == null) return;
 
             // Abrir la ventana de precio con el producto encontrado
@@ -813,8 +840,15 @@ private void button10_Click(object sender, EventArgs e)
             NombreABuscar.Focus();
         }
 
-        private void button13_Click(object sender, EventArgs e)
+        private async void button13_Click(object sender, EventArgs e)
         {
+            var permitido = await PermissionAccess.EnsurePermissionAsync(
+                empleado,
+                AppPermissions.VentasDescuento,
+                this,
+                "aplicar descuentos");
+            if (!permitido) return;
+
             // Disminuye la cantidad del producto seleccionado
             var row = ListaDeCompras.CurrentRow;
             if (row == null) return;
@@ -833,8 +867,15 @@ private void button10_Click(object sender, EventArgs e)
             }
         }
 
-        private void button15_Click(object sender, EventArgs e)
+        private async void button15_Click(object sender, EventArgs e)
         {
+            var permitido = await PermissionAccess.EnsurePermissionAsync(
+                empleado,
+                AppPermissions.VentasDescuento,
+                this,
+                "modificar descuento/cantidad");
+            if (!permitido) return;
+
             // Aumenta la cantidad del producto seleccionado
             var row = ListaDeCompras.CurrentRow;
             if (row == null) return;
@@ -855,28 +896,57 @@ private void button10_Click(object sender, EventArgs e)
 
         #region Procesamiento de venta
 
+        private async Task<SalePreparationResult?> ValidateAndPrepareSaleAsync(string actionLabel)
+        {
+            if (!await PermissionAccess.EnsurePermissionAsync(empleado, AppPermissions.VentasCrear, this, actionLabel))
+                return null;
+
+            var preparation = await BuildSalePreparationAsync();
+            if (!preparation.IsValid)
+            {
+                var details = string.Join(Environment.NewLine, preparation.Issues.Select(i => $"- {i.Message} ({i.Code})"));
+                MessageBox.Show($"No se puede continuar:\n{details}", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return null;
+            }
+            ApplyTotals(preparation.Totals);
+            return preparation;
+        }
+
+        private async Task<bool> ExecuteSalePersistenceAsync(bool paid, SalePreparationResult preparation, bool isQuotation = false)
+        {
+            var result = await RegistrarFacturaAsync(paid, preparation, isQuotation);
+            if (!result.Success)
+            {
+                MessageBox.Show(result.Message, "Error de persistencia", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            return true;
+        }
+
         private async void button18_Click(object sender, EventArgs e)
         {
-            // Registrar productos en inventario si no está cargada
-            if (!esCargada && facturaActiva != null)
-                await facturaActiva.RegistrarProductosAsync(+1);
+            var preparation = await ValidateAndPrepareSaleAsync("registrar venta");
+            if (preparation == null) return;
 
-            // Registrar o actualizar la factura en BD
-            await RegistrarFacturaAsync(false);
-
+            if (!await ExecuteSalePersistenceAsync(false, preparation))
+                return;
             LimpiarTodo();
         }
 
         private async void Cobrar_Click(object sender, EventArgs e)
         {
+            var preparation = await ValidateAndPrepareSaleAsync("cobrar venta");
+            if (preparation == null) return;
+
             if (ValidarDireccionParaEnvio())
             {
                 MostrarAvisoDireccionFaltante();
                 return;
             }
 
-            // Registra la factura como pagada
-            await RegistrarFacturaAsync(true);
+            if (!await ExecuteSalePersistenceAsync(true, preparation))
+                return;
 
             // Abre ventana de pago con cliente y factura actual
             var ventanaPagar = new VentanaPagar
@@ -912,6 +982,9 @@ private void button10_Click(object sender, EventArgs e)
         // Cobrar y registrar la factura; ahora async para await RegistrarFacturaAsync
         private async void button5_Click(object sender, EventArgs e)
         {
+            var preparation = await ValidateAndPrepareSaleAsync("generar factura");
+            if (preparation == null) return;
+
             Configuraciones confi = new Configuraciones().ObtenerPorId(1);
             if (confi != null)
             {
@@ -929,8 +1002,8 @@ private void button10_Click(object sender, EventArgs e)
                 return;
             }
 
-            // Registrar o actualizar la factura en BD
-            await RegistrarFacturaAsync(true);
+            if (!await ExecuteSalePersistenceAsync(true, preparation))
+                return;
 
             // Restaurar UI
             label11.ForeColor = Color.White;
@@ -1132,8 +1205,12 @@ private void button10_Click(object sender, EventArgs e)
         /// </summary>
         public async Task CotizarAsync()
         {
+            var preparation = await ValidateAndPrepareSaleAsync("cotizar venta");
+            if (preparation == null) return;
+
             // Registra factura en BD sin marcarla pagada
-            await RegistrarFacturaAsync(false);
+            if (!await ExecuteSalePersistenceAsync(false, preparation, isQuotation: true))
+                return;
 
             // Reset UI
             label11.ForeColor = Color.White;
@@ -1175,24 +1252,10 @@ private void button10_Click(object sender, EventArgs e)
             var term = NombreABuscar.Text?.Trim().ToLower();
             if (string.IsNullOrEmpty(term)) return;
 
-            // Conexión async a MongoDB
-            var client = new MongoClient(new OneKeys().URI);
-            var db = client.GetDatabase(new OneKeys().DatabaseName);
-            var col = db.GetCollection<Productos>("Productos");
+            var searchResult = await AppServices.Product.SearchByNameAsync(term, limit: 30, excludeGeneric: true);
+            if (!searchResult.Success) return;
 
-            var filter = Builders<Productos>.Filter.And(
-                Builders<Productos>.Filter.Regex("nombre", new BsonRegularExpression(term, "i")),
-                Builders<Productos>.Filter.Ne("nombre", "Generico")
-            );
-            var projection = Builders<Productos>.Projection
-                .Include(p => p.Nombre)
-                .Include(p => p.Descripcion)
-                .Include(p => p.Marca)
-                .Include(p => p.Precio);
-
-            var results = await col.Find(filter).Project<Productos>(projection).ToListAsync();
-
-            foreach (var prod in results)
+            foreach (var prod in searchResult.Products)
             {
                 ListaProductos.Rows.Add(
                     prod.Id,
@@ -1215,7 +1278,8 @@ private void button10_Click(object sender, EventArgs e)
             if (string.IsNullOrEmpty(id)) return;
 
             // Busca producto async
-            var producto = await  Productos.BuscarAsync(id);
+            var lookup = await AppServices.Product.FindByCodeAsync(id);
+            var producto = lookup.Product;
             if (producto != null)
             {
                 codigoProducto = id;

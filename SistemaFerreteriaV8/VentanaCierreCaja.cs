@@ -1,5 +1,7 @@
 ﻿using Microsoft.VisualBasic;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.AppCore.Abstractions;
+using SistemaFerreteriaV8.Infrastructure.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -46,26 +48,23 @@ namespace SistemaFerreteriaV8
                         MessageBox.Show("Por favor, ingrese un valor numérico válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-                // Buscar la caja activa async (esto no bloquea el UI)
-                nueva = await Task.Run(() =>  Caja.BuscarPorClaveAsync("estado", "true"));
+                var usuarioCaja = string.IsNullOrWhiteSpace(empleadoActivo?.Nombre) ? "Genérico" : empleadoActivo.Nombre;
+                var preview = await AppServices.CashRegister.BuildClosePreviewAsync(
+                    new CashRegisterClosePreviewRequest(usuarioCaja, balanceAlCierre, DateTime.Now));
 
-                // Verificar si existe una caja activa
-                if (nueva == null)
+                nueva = preview.CajaActiva;
+
+                if (!preview.Success || nueva == null)
                 {
-                    MessageBox.Show("No existen cajas activas.", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(preview.Message, "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     Close();
                     return;
                 }
 
-                // Mostrar la fecha de apertura
                 fecha.Text = nueva.FechaApertura.ToShortDateString();
 
-                // Obtener facturas válidas asociadas a la empresa
-                var (listaFacturas, total) = await Task.Run(() => Factura.ListarFacturasCierre("nombreEmpresa", nueva.Id));
-
-                // Agregar facturas al DataGridView
                 ListaCompras.Rows.Clear();
-                foreach (var item in listaFacturas)
+                foreach (var item in preview.RelatedInvoices ?? Array.Empty<Factura.FacturaResumen>())
                 {
                     ListaCompras.Rows.Add(
                         item.Id,
@@ -77,23 +76,19 @@ namespace SistemaFerreteriaV8
                     );
                 }
 
-                // Calcular totales e información financiera
-                double totalCaja = nueva.BalanceInicial + total;
+                var vendidoTotal = preview.ExpectedBalance - nueva.BalanceInicial;
                 MontoApertura.Text = nueva.BalanceInicial.ToString("C2");
-                Vendido.Text = total.ToString("C2");
-                Sum.Text = totalCaja.ToString("C2");
-                Registrado.Text = balanceAlCierre.ToString("C2");
-                Usuario.Text = string.IsNullOrWhiteSpace(empleadoActivo?.Nombre) ? "Genérico" : empleadoActivo.Nombre;
+                Vendido.Text = vendidoTotal.ToString("C2");
+                Sum.Text = preview.ExpectedBalance.ToString("C2");
+                Registrado.Text = preview.ReportedBalance.ToString("C2");
+                Usuario.Text = usuarioCaja;
 
-                // Verificar el cuadre de caja
-                double descuadre = totalCaja - balanceAlCierre;
-                Resultado.Text = Math.Abs(descuadre) < 0.01
+                Resultado.Text = Math.Abs(preview.Difference) < 0.01
                     ? "Cuadre Exitoso"
-                    : $"Existe un descuadre de {descuadre.ToString("C2")}";
+                    : $"Existe un descuadre de {preview.Difference.ToString("C2")}";
 
-                // Guardar valores globales
-                Vendido1 = total;
-                Registrado1 = balanceAlCierre;
+                Vendido1 = vendidoTotal;
+                Registrado1 = preview.ReportedBalance;
             }
             catch (Exception ex)
             {
@@ -105,9 +100,19 @@ namespace SistemaFerreteriaV8
         {
             try
             {
-                nueva.Estado = "false";
-                await Task.Run(() => nueva.EditarAsync());
-                var frm = Application.OpenForms["Form1"] as Form1;
+                var closeResult = await AppServices.CashRegister.CloseAsync(
+                    new CashRegisterCloseRequest(
+                        Usuario.Text,
+                        Registrado1,
+                        DateTime.Now));
+                if (!closeResult.Success)
+                {
+                    MessageBox.Show(closeResult.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                nueva = closeResult.CajaActiva;
+                var frm = WinFormsApp.OpenForms["Form1"] as Form1;
                 frm?.Dispose();
                 this.Dispose();
             }
