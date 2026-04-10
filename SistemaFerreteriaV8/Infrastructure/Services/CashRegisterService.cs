@@ -1,3 +1,4 @@
+using MongoDB.Driver;
 using SistemaFerreteriaV8.AppCore.Abstractions;
 using SistemaFerreteriaV8.Clases;
 
@@ -94,6 +95,17 @@ public sealed class CashRegisterService : ICashRegisterService
                 new { caja.Turno, caja.BalanceInicial, caja.Id });
 
             return new CashRegisterResult(true, "Caja abierta correctamente.", caja, OperationId: operationId);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            await WriteAuditAsync("cash_register.open_duplicate_key", "warning", ex.Message, request.Usuario, operationId);
+            var activeAfterDuplicate = await GetActiveAsync();
+            return new CashRegisterResult(
+                false,
+                "No se pudo abrir la caja porque ya existe una caja abierta (restricción de base de datos).",
+                activeAfterDuplicate.CajaActiva,
+                CashRegisterErrorType.DuplicateOpen,
+                OperationId: operationId);
         }
         catch (Exception ex)
         {

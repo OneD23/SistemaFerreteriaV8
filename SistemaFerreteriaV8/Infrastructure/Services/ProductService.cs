@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SistemaFerreteriaV8.AppCore.Abstractions;
 using SistemaFerreteriaV8.Clases;
@@ -7,6 +8,9 @@ namespace SistemaFerreteriaV8.Infrastructure.Services;
 public sealed class ProductService : IProductService
 {
     private const int MaxAttempts = 2;
+
+    public Task<ProductLookupResult> FindByCodeAsync(string code)
+        => FindByIdAsync(code);
 
     public async Task<ProductLookupResult> FindByIdAsync(string productId)
     {
@@ -30,6 +34,30 @@ public sealed class ProductService : IProductService
             : new ProductLookupResult(true, "Producto encontrado.", product);
     }
 
+    public async Task<ProductSearchResult> SearchByNameAsync(string term, int limit = 25, bool excludeGeneric = true)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+            return new ProductSearchResult(false, "Término de búsqueda vacío.", Array.Empty<Productos>());
+
+        var client = new MongoClient(new OneKeys().URI);
+        var db = client.GetDatabase(new OneKeys().DatabaseName);
+        var col = db.GetCollection<Productos>("Productos");
+
+        var filter = Builders<Productos>.Filter.Regex("nombre", new BsonRegularExpression(term.Trim(), "i"));
+        if (excludeGeneric)
+        {
+            filter = Builders<Productos>.Filter.And(
+                filter,
+                Builders<Productos>.Filter.Ne("nombre", "Generico"));
+        }
+
+        var results = await col.Find(filter)
+            .Limit(Math.Max(1, limit))
+            .ToListAsync();
+
+        return new ProductSearchResult(true, "Búsqueda completada.", results);
+    }
+
     public async Task<StockCheckResult> CheckStockAsync(string productId, double requestedQuantity)
     {
         var lookup = await FindByIdAsync(productId);
@@ -43,6 +71,51 @@ public sealed class ProductService : IProductService
             return new StockCheckResult(false, "Stock insuficiente.", lookup.Product.Cantidad, requestedQuantity);
 
         return new StockCheckResult(true, "Stock disponible.", lookup.Product.Cantidad, requestedQuantity);
+    }
+
+    public async Task<StockSnapshotResult> GetStockSnapshotAsync(string productId)
+    {
+        var lookup = await FindByIdAsync(productId);
+        if (!lookup.Found || lookup.Product == null)
+            return new StockSnapshotResult(false, lookup.Message);
+
+        return new StockSnapshotResult(
+            true,
+            "Stock consultado correctamente.",
+            lookup.Product.Id,
+            lookup.Product.Nombre,
+            lookup.Product.Cantidad,
+            lookup.Product.Vendido);
+    }
+
+    public async Task<StockAdjustmentResult> AdjustStockAsync(StockAdjustmentRequest request)
+    {
+        var operationId = string.IsNullOrWhiteSpace(request.OperationId)
+            ? Guid.NewGuid().ToString("N")
+            : request.OperationId;
+
+        var lookup = !string.IsNullOrWhiteSpace(request.ProductId)
+            ? await FindByIdAsync(request.ProductId)
+            : await FindByNameAsync(request.ProductName);
+
+        if (!lookup.Found || lookup.Product == null)
+            return new StockAdjustmentResult(false, "Producto no encontrado para ajuste de inventario.", null, OperationId: operationId);
+
+        var product = lookup.Product;
+        var previousQty = product.Cantidad;
+        var nextQty = previousQty + request.QuantityDelta;
+        if (nextQty < 0)
+            return new StockAdjustmentResult(false, "Ajuste inválido: la cantidad resultante no puede ser negativa.", product, previousQty, previousQty, operationId);
+
+        var nextSold = product.Vendido + request.SoldDelta;
+        if (nextSold < 0)
+            return new StockAdjustmentResult(false, "Ajuste inválido: el total vendido no puede ser negativo.", product, previousQty, previousQty, operationId);
+
+        product.Cantidad = nextQty;
+        product.Vendido = nextSold;
+        await product.ActualizarProductosAsync();
+
+        return new StockAdjustmentResult(true, "Ajuste aplicado correctamente.", product, previousQty, nextQty, operationId);
     }
 
     public async Task<StockMovementResult> ApplySaleStockAsync(IEnumerable<StockMovementItem> items, string operationId)
@@ -62,25 +135,23 @@ public sealed class ProductService : IProductService
                     if (item.Quantity <= 0) continue;
                     if (string.Equals(item.ProductName, "Generico", StringComparison.OrdinalIgnoreCase)) continue;
 
-                    var lookup = !string.IsNullOrWhiteSpace(item.ProductId)
-                        ? await FindByIdAsync(item.ProductId)
-                        : await FindByNameAsync(item.ProductName);
+                    var adjustment = await AdjustStockAsync(new StockAdjustmentRequest(
+                        item.ProductId,
+                        item.ProductName,
+                        QuantityDelta: -item.Quantity,
+                        SoldDelta: item.Quantity,
+                        Reason: "sale_confirm",
+                        OperationId: operationId));
 
-                    if (!lookup.Found || lookup.Product == null)
-                        return new StockMovementResult(false, $"No se encontró el producto '{item.ProductName}' para la operación {operationId}.", applied, applied.Count > 0, attempt);
+                    if (!adjustment.Success || adjustment.Product == null)
+                        return new StockMovementResult(false, adjustment.Message, applied, applied.Count > 0, attempt);
 
-                    var product = lookup.Product;
-                    if (product.Cantidad < item.Quantity)
-                        return new StockMovementResult(false, $"Stock insuficiente para '{product.Nombre}'. Disponible={product.Cantidad}, requerido={item.Quantity}.", applied, applied.Count > 0, attempt);
-
-                    var originalQty = product.Cantidad;
-                    var originalSold = product.Vendido;
-
-                    product.Cantidad -= item.Quantity;
-                    product.Vendido += item.Quantity;
-                    await product.ActualizarProductosAsync();
-
-                    applied.Add(new StockMovementAppliedItem(product.Id, product.Nombre, item.Quantity, originalQty, originalSold));
+                    applied.Add(new StockMovementAppliedItem(
+                        adjustment.Product.Id,
+                        adjustment.Product.Nombre,
+                        item.Quantity,
+                        adjustment.PreviousQuantity,
+                        adjustment.Product.Vendido - item.Quantity));
                 }
 
                 return new StockMovementResult(true, string.Empty, applied, false, attempt);

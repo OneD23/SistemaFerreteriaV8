@@ -1,7 +1,5 @@
 ﻿
 using Microsoft.VisualBasic;
-using MongoDB.Bson;
-using MongoDB.Driver;
 using Octetus.ConsultasDgii.Services;
 using SistemaFerreteriaV8.Clases;
 using SistemaFerreteriaV8.Domain.Security;
@@ -642,7 +640,8 @@ private void button10_Click(object sender, EventArgs e)
             if (string.IsNullOrEmpty(nombre)) return;
 
             // Buscar el producto de forma asíncrona
-            var producto = await  Productos.BuscarPorClaveAsync("nombre", nombre);
+            var lookupPrecio = await AppServices.Product.FindByNameAsync(nombre);
+            var producto = lookupPrecio.Product;
             if (producto == null) return;
 
             // Abrir la ventana de precio con el producto encontrado
@@ -1253,24 +1252,10 @@ private void button10_Click(object sender, EventArgs e)
             var term = NombreABuscar.Text?.Trim().ToLower();
             if (string.IsNullOrEmpty(term)) return;
 
-            // Conexión async a MongoDB
-            var client = new MongoClient(new OneKeys().URI);
-            var db = client.GetDatabase(new OneKeys().DatabaseName);
-            var col = db.GetCollection<Productos>("Productos");
+            var searchResult = await AppServices.Product.SearchByNameAsync(term, limit: 30, excludeGeneric: true);
+            if (!searchResult.Success) return;
 
-            var filter = Builders<Productos>.Filter.And(
-                Builders<Productos>.Filter.Regex("nombre", new BsonRegularExpression(term, "i")),
-                Builders<Productos>.Filter.Ne("nombre", "Generico")
-            );
-            var projection = Builders<Productos>.Projection
-                .Include(p => p.Nombre)
-                .Include(p => p.Descripcion)
-                .Include(p => p.Marca)
-                .Include(p => p.Precio);
-
-            var results = await col.Find(filter).Project<Productos>(projection).ToListAsync();
-
-            foreach (var prod in results)
+            foreach (var prod in searchResult.Products)
             {
                 ListaProductos.Rows.Add(
                     prod.Id,
@@ -1293,7 +1278,8 @@ private void button10_Click(object sender, EventArgs e)
             if (string.IsNullOrEmpty(id)) return;
 
             // Busca producto async
-            var producto = await  Productos.BuscarAsync(id);
+            var lookup = await AppServices.Product.FindByCodeAsync(id);
+            var producto = lookup.Product;
             if (producto != null)
             {
                 codigoProducto = id;
