@@ -141,8 +141,15 @@ namespace SistemaFerreteriaV8
                 Puesto = auth.Role.ToString()
             };
 
-            var cashState = await AppServices.CashRegister.ValidateOpenStateAsync();
-            if (!cashState.Success)
+            var cashState = await AppServices.CashRegister.GetActiveAsync(empleado.Nombre);
+            if (cashState.Success && cashState.CajaActiva != null)
+            {
+                turno.Text = cashState.CajaActiva.Turno;
+                Balance.Text = cashState.CajaActiva.BalanceInicial.ToString();
+                turno.Enabled = false;
+                Balance.Enabled = false;
+            }
+            else if (cashState.ErrorType == CashRegisterErrorType.NotFound)
             {
                 if (!double.TryParse(Balance.Text, out var balanceInicial))
                 {
@@ -157,13 +164,16 @@ namespace SistemaFerreteriaV8
                     MessageBox.Show(openResult.Message, "Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
+
+                turno.Text = openResult.CajaActiva?.Turno ?? turno.Text;
+                Balance.Text = openResult.CajaActiva?.BalanceInicial.ToString() ?? Balance.Text;
+                turno.Enabled = false;
+                Balance.Enabled = false;
             }
             else
             {
-                turno.Text = cashState.CajaActiva.Turno;
-                Balance.Text = cashState.CajaActiva.BalanceInicial.ToString();
-                turno.Enabled = false;
-                Balance.Enabled = false;
+                MessageBox.Show(cashState.Message, "Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
             // Asignar empleado activo en Form1 si está abierto
