@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SistemaFerreteriaV8.Clases
@@ -36,12 +37,53 @@ namespace SistemaFerreteriaV8.Clases
 
         private static readonly IMongoCollection<Caja> _cajaCollection;
 
+        private const string EstadoAbierta = "true";
+
         // Inicialización estática para usar siempre la misma instancia de colección
         static Caja()
         {
             _cajaCollection = new MongoClient(new OneKeys().URI)
                 .GetDatabase(new OneKeys().DatabaseName)
                 .GetCollection<Caja>("caja2");
+
+            EnsureIndexes();
+        }
+
+        private static void EnsureIndexes()
+        {
+            try
+            {
+                var indexNames = _cajaCollection.Indexes
+                    .List()
+                    .ToList()
+                    .Select(i => i.GetValue("name", "").AsString)
+                    .ToHashSet();
+
+                // Regla de consistencia elegida: solo puede existir una caja global con estado abierto=true.
+                if (!indexNames.Contains("idx_caja_single_open_global"))
+                {
+                    var partialOpenFilter = Builders<Caja>.Filter.Eq(c => c.Estado, EstadoAbierta);
+                    var indexModel = new CreateIndexModel<Caja>(
+                        Builders<Caja>.IndexKeys.Ascending(c => c.Estado),
+                        new CreateIndexOptions
+                        {
+                            Name = "idx_caja_single_open_global",
+                            Unique = true,
+                            PartialFilterExpression = partialOpenFilter
+                        });
+
+                    _cajaCollection.Indexes.CreateOne(indexModel);
+                }
+            }
+            catch (MongoCommandException)
+            {
+                // Evita romper inicialización si existen datos legados que violan la restricción.
+                // El servicio seguirá detectando inconsistencias para mitigación operativa.
+            }
+            catch (MongoException)
+            {
+                // Evita caída del sistema por errores transitorios de conectividad/índices.
+            }
         }
 
         public Caja()
