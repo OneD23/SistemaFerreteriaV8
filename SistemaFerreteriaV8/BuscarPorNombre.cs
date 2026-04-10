@@ -22,7 +22,7 @@ namespace SistemaFerreteriaV8
             {
                 if (frm == null || frm.IsDisposed)
                 {
-                    frm = (VentanaVentas)Application.OpenForms["VentanaVentas"];
+                    frm = (VentanaVentas)WinFormsApp.OpenForms["VentanaVentas"];
                 }
                 return frm;
             }
