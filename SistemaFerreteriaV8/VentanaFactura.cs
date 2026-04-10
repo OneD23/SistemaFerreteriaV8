@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualBasic;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Infrastructure.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -118,7 +119,8 @@ namespace SistemaFerreteriaV8
                     !double.TryParse(precioStr, out double precio))
                     continue;
 
-                Productos productoActual = new Productos().Buscar("nombre", nombre);
+                var lookupProducto = await AppServices.Product.FindByNameAsync(nombre);
+                var productoActual = lookupProducto.Product ?? new Productos { Nombre = nombre };
 
                 var productos = new ListProduct()
                 {
