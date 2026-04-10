@@ -15,10 +15,24 @@ namespace SistemaFerreteriaV8
 {
     public partial class Usuarios : Form
     {
+        private readonly Button _btnPermisosUsuario = new Button();
+
         public Usuarios()
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            InicializarBotonPermisos();
+        }
+
+        private void InicializarBotonPermisos()
+        {
+            _btnPermisosUsuario.Text = "Permisos Usuario";
+            _btnPermisosUsuario.Width = 150;
+            _btnPermisosUsuario.Height = 34;
+            _btnPermisosUsuario.Left = 12;
+            _btnPermisosUsuario.Top = Math.Max(button1.Bottom, button2.Bottom) + 12;
+            _btnPermisosUsuario.Click += async (_, _) => await AbrirPermisosUsuarioAsync();
+            Controls.Add(_btnPermisosUsuario);
         }
 
         private async void button2_Click(object sender, EventArgs e)
@@ -56,5 +70,18 @@ namespace SistemaFerreteriaV8
 
             this.Dispose();
         }
+        private async Task AbrirPermisosUsuarioAsync()
+        {
+            if (!await PermissionAccess.EnsurePermissionAsync(
+                    PermissionAccess.GetActiveEmployee(),
+                    AppPermissions.EmpleadosGestionar,
+                    this,
+                    "administrar permisos por usuario"))
+                return;
+
+            using var ventana = new VentanaPermisosUsuario();
+            ventana.ShowDialog(this);
+        }
+
     }
 }
