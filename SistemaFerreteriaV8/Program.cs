@@ -18,8 +18,8 @@ namespace SistemaFerreteriaV8
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+            WinFormsApp.EnableVisualStyles();
+            WinFormsApp.SetCompatibleTextRenderingDefault(false);
 
             var settings = AppInstanceSettings.Load();
             if (!settings.IsConfigured)
@@ -33,7 +33,7 @@ namespace SistemaFerreteriaV8
 
             OneKeys.ApplySettings(settings);
             EnsureInitialConfigurationDocument(settings);
-            Application.Run(new Form1());
+            WinFormsApp.Run(new Form1());
         }
 
         private static bool RunFirstTimeSetup(AppInstanceSettings settings)
