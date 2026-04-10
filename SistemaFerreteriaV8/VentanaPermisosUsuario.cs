@@ -2,6 +2,7 @@ using SistemaFerreteriaV8.AppCore.Abstractions;
 using SistemaFerreteriaV8.Clases;
 using SistemaFerreteriaV8.Domain.Security;
 using SistemaFerreteriaV8.Infrastructure.Security;
+using System.Drawing;
 
 namespace SistemaFerreteriaV8;
 
@@ -15,6 +16,7 @@ public sealed class VentanaPermisosUsuario : Form
     private readonly CheckedListBox _chkDeny = new();
     private readonly Button _btnGuardar = new() { Text = "Guardar overrides" };
     private readonly Label _lblEstado = new() { AutoSize = true };
+    private readonly Label _lblUsuarioRol = new() { AutoSize = true, Text = "Usuario: - | Rol: -" };
 
     private List<Empleado> _usuarios = new();
     private UserPermissionSnapshot? _snapshotActual;
@@ -74,6 +76,7 @@ public sealed class VentanaPermisosUsuario : Form
         var footer = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight };
         _btnGuardar.Width = 180;
         footer.Controls.Add(_btnGuardar);
+        footer.Controls.Add(_lblUsuarioRol);
         footer.Controls.Add(_lblEstado);
 
         root.Controls.Add(_txtBuscar, 0, 0);
@@ -91,6 +94,11 @@ public sealed class VentanaPermisosUsuario : Form
             _chkAllow.Items.Add(permission);
             _chkDeny.Items.Add(permission);
         }
+
+        _lstRol.BackColor = Color.FromArgb(243, 246, 255);
+        _chkAllow.BackColor = Color.FromArgb(236, 253, 245);
+        _chkDeny.BackColor = Color.FromArgb(254, 242, 242);
+        _lstEfectivos.BackColor = Color.FromArgb(239, 246, 255);
     }
 
     private static Control Wrap(string title, Control child)
@@ -145,7 +153,8 @@ public sealed class VentanaPermisosUsuario : Form
         SyncChecks(_chkAllow, _snapshotActual.AllowOverrides);
         SyncChecks(_chkDeny, _snapshotActual.DenyOverrides);
 
-        _lblEstado.Text = $"Usuario: {_snapshotActual.EmployeeName} | Id: {_snapshotActual.EmployeeId}";
+        _lblUsuarioRol.Text = $"Usuario: {_snapshotActual.EmployeeName} | Rol: {(empleado.Puesto ?? "sin_rol")}";
+        _lblEstado.Text = $"Snapshot cargado: {_snapshotActual.EffectivePermissions.Count} permisos efectivos";
     }
 
     private static void SyncChecks(CheckedListBox list, IReadOnlyCollection<string> selected)
@@ -177,6 +186,7 @@ public sealed class VentanaPermisosUsuario : Form
 
         await SecurityServices.UserPermissionService.SetOverridesAsync(_snapshotActual.EmployeeId, allow, deny);
         await CargarSnapshotSeleccionadoAsync();
-        _lblEstado.Text = $"Overrides guardados para {_snapshotActual.EmployeeName}";
+        _lblEstado.Text = $"Overrides guardados correctamente ({DateTime.Now:HH:mm:ss})";
+        MessageBox.Show("Permisos guardados correctamente.", "Permisos", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 }

@@ -1,3 +1,4 @@
+using System.Drawing;
 using SistemaFerreteriaV8.AppCore.Abstractions;
 using SistemaFerreteriaV8.Infrastructure.Services;
 
@@ -10,7 +11,7 @@ public sealed class VentanaAuditoriaConsulta : Form
     private readonly CheckBox _chkFrom = new() { Text = "Desde", Checked = true, AutoSize = true };
     private readonly CheckBox _chkTo = new() { Text = "Hasta", Checked = true, AutoSize = true };
     private readonly TextBox _txtActor = new();
-    private readonly TextBox _txtModule = new();
+    private readonly ComboBox _cmbModule = new() { DropDownStyle = ComboBoxStyle.DropDown };
     private readonly TextBox _txtEvent = new();
     private readonly TextBox _txtOperation = new();
     private readonly NumericUpDown _numLimit = new() { Minimum = 20, Maximum = 1000, Value = 300 };
@@ -44,7 +45,7 @@ public sealed class VentanaAuditoriaConsulta : Form
         filters.Controls.Add(new Label { Text = "Usuario", AutoSize = true, Top = 6 }, 4, 0);
         filters.Controls.Add(_txtActor, 5, 0);
         filters.Controls.Add(new Label { Text = "Módulo", AutoSize = true, Top = 6 }, 6, 0);
-        filters.Controls.Add(_txtModule, 7, 0);
+        filters.Controls.Add(_cmbModule, 7, 0);
 
         filters.Controls.Add(new Label { Text = "Evento", AutoSize = true, Top = 6 }, 0, 1);
         filters.Controls.Add(_txtEvent, 1, 1);
@@ -61,6 +62,18 @@ public sealed class VentanaAuditoriaConsulta : Form
         _grid.Columns.Add("Result", "Resultado");
         _grid.Columns.Add("Message", "Mensaje");
         _grid.Columns.Add("OperationId", "OperationId");
+        _grid.Columns[0].FillWeight = 18;
+        _grid.Columns[1].FillWeight = 14;
+        _grid.Columns[2].FillWeight = 10;
+        _grid.Columns[3].FillWeight = 16;
+        _grid.Columns[4].FillWeight = 8;
+        _grid.Columns[5].FillWeight = 26;
+        _grid.Columns[6].FillWeight = 18;
+        _grid.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
+        _grid.Columns[5].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+        _grid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+
+        _cmbModule.Items.AddRange(new object[] { "", "ventas", "caja", "inventario", "security", "permissions" });
 
         root.Controls.Add(filters, 0, 0);
         root.Controls.Add(_grid, 0, 1);
@@ -81,7 +94,7 @@ public sealed class VentanaAuditoriaConsulta : Form
                 FromUtc: _chkFrom.Checked ? _from.Value.Date.ToUniversalTime() : null,
                 ToUtc: _chkTo.Checked ? _to.Value.Date.AddDays(1).AddSeconds(-1).ToUniversalTime() : null,
                 Actor: _txtActor.Text.Trim(),
-                Module: _txtModule.Text.Trim(),
+                Module: _cmbModule.Text.Trim(),
                 EventType: _txtEvent.Text.Trim(),
                 OperationId: _txtOperation.Text.Trim(),
                 Limit: (int)_numLimit.Value);
@@ -91,7 +104,7 @@ public sealed class VentanaAuditoriaConsulta : Form
             _grid.Rows.Clear();
             foreach (var item in results)
             {
-                _grid.Rows.Add(
+                var rowIndex = _grid.Rows.Add(
                     item.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss"),
                     string.IsNullOrWhiteSpace(item.ActorName) ? item.ActorId : item.ActorName,
                     item.Module,
@@ -99,6 +112,14 @@ public sealed class VentanaAuditoriaConsulta : Form
                     item.Result,
                     item.Message,
                     ExtractOperationId(item.MetadataJson));
+
+                var row = _grid.Rows[rowIndex];
+                if (string.Equals(item.Result, "error", StringComparison.OrdinalIgnoreCase) || string.Equals(item.Result, "unexpected_error", StringComparison.OrdinalIgnoreCase))
+                    row.DefaultCellStyle.BackColor = Color.MistyRose;
+                else if (string.Equals(item.Result, "warning", StringComparison.OrdinalIgnoreCase) || string.Equals(item.Result, "stock_error", StringComparison.OrdinalIgnoreCase))
+                    row.DefaultCellStyle.BackColor = Color.LemonChiffon;
+                else if (string.Equals(item.Result, "ok", StringComparison.OrdinalIgnoreCase) || string.Equals(item.Result, "confirmed", StringComparison.OrdinalIgnoreCase))
+                    row.DefaultCellStyle.BackColor = Color.Honeydew;
             }
         }
         catch (Exception ex)
