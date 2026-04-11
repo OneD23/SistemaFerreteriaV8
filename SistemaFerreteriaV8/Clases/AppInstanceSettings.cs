@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SistemaFerreteriaV8.Clases
 {
@@ -50,6 +52,9 @@ namespace SistemaFerreteriaV8.Clases
                     case "mongo_uri":
                         settings.MongoUri = value;
                         break;
+                    case "mongo_uri_enc":
+                        settings.MongoUri = Decrypt(value);
+                        break;
                     case "node_role":
                         settings.NodeRole = value;
                         break;
@@ -70,11 +75,42 @@ namespace SistemaFerreteriaV8.Clases
                 $"is_configured={(IsConfigured ? "true" : "false")}",
                 $"company_name={CompanyName}",
                 $"database_name={DatabaseName}",
-                $"mongo_uri={MongoUri}",
+                $"mongo_uri_enc={Encrypt(MongoUri)}",
                 $"node_role={NodeRole}"
             };
 
             File.WriteAllLines(SettingsFilePath, lines);
+        }
+
+        private static string Encrypt(string plainText)
+        {
+            if (string.IsNullOrWhiteSpace(plainText))
+                return string.Empty;
+
+            var bytes = Encoding.UTF8.GetBytes(plainText);
+            var encrypted = ProtectedData.Protect(bytes, null, DataProtectionScope.LocalMachine);
+            return Convert.ToBase64String(encrypted);
+        }
+
+        private static string Decrypt(string cipherText)
+        {
+            if (string.IsNullOrWhiteSpace(cipherText))
+                return "mongodb://localhost:27017/";
+
+            try
+            {
+                var encrypted = Convert.FromBase64String(cipherText);
+                var bytes = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.LocalMachine);
+                return Encoding.UTF8.GetString(bytes);
+            }
+            catch (CryptographicException)
+            {
+                return "mongodb://localhost:27017/";
+            }
+            catch (FormatException)
+            {
+                return "mongodb://localhost:27017/";
+            }
         }
     }
 }

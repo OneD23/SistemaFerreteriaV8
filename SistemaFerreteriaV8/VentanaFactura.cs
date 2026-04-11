@@ -1,7 +1,9 @@
 ﻿using Microsoft.VisualBasic;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Infrastructure.Services;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -11,11 +13,74 @@ namespace SistemaFerreteriaV8
     public partial class VentanaFactura : Form
     {
         public Factura Factura { get; set; }
+        private readonly Label lblEstado = new Label { AutoSize = true, Visible = false };
 
         public VentanaFactura()
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            ModernizarFormulario();
+            ConfigurarAtajosTeclado();
+        }
+
+        private void ModernizarFormulario()
+        {
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            ConfigurarBoton(Actualizar, Color.FromArgb(14, 116, 144));
+            ConfigurarBoton(Eliminar, Color.FromArgb(220, 38, 38));
+            ConfigurarBoton(button1, Color.FromArgb(59, 130, 246));
+            ConfigurarBoton(button2, Color.FromArgb(16, 185, 129));
+
+            dataGridView1.EnableHeadersVisualStyles = false;
+            dataGridView1.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
+            dataGridView1.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dataGridView1.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            dataGridView1.DefaultCellStyle.SelectionForeColor = Color.FromArgb(15, 23, 42);
+            dataGridView1.GridColor = Color.FromArgb(226, 232, 240);
+            dataGridView1.RowTemplate.Height = Math.Max(dataGridView1.RowTemplate.Height, 26);
+
+            lblEstado.Left = 12;
+            lblEstado.Top = Math.Max(button1.Bottom, button2.Bottom) + 10;
+            Controls.Add(lblEstado);
+        }
+
+        private static void ConfigurarBoton(Button button, Color backColor)
+        {
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            button.BackColor = backColor;
+            button.ForeColor = Color.White;
+            button.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            button.Height = Math.Max(button.Height, 32);
+        }
+
+        private void ConfigurarAtajosTeclado()
+        {
+            KeyPreview = true;
+            KeyDown += (_, e) =>
+            {
+                if (e.KeyCode == Keys.Escape)
+                {
+                    Close();
+                    e.SuppressKeyPress = true;
+                }
+            };
+
+            IdFactura.KeyDown += (_, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    RegistrarFactura();
+                }
+            };
+        }
+
+        private void MostrarEstado(string mensaje, bool error = false)
+        {
+            lblEstado.Text = mensaje;
+            lblEstado.ForeColor = error ? Color.Maroon : Color.DarkGreen;
+            lblEstado.Visible = true;
         }
 
         private void VentanaFactura_Load(object sender, EventArgs e)
@@ -70,7 +135,7 @@ namespace SistemaFerreteriaV8
                     return;
                 }
 
-                Form1 frmPrincipal = Application.OpenForms["Form1"] as Form1;
+                Form1 frmPrincipal = WinFormsApp.OpenForms["Form1"] as Form1;
                 Empleado usuarioActual = frmPrincipal?.EmpleadoActivo;
 
                 Factura.MotivoEliminacion = motivo.Trim();
@@ -87,6 +152,7 @@ namespace SistemaFerreteriaV8
                 }
 
                 await Factura.EliminarFacturaAsync();
+                MostrarEstado("Factura eliminada correctamente.");
                 MessageBox.Show(
                     $"Factura eliminada correctamente.\nMotivo: {Factura.MotivoEliminacion}\nUsuario: {Factura.EliminadaPorNombre}",
                     "Factura eliminada",
@@ -118,7 +184,8 @@ namespace SistemaFerreteriaV8
                     !double.TryParse(precioStr, out double precio))
                     continue;
 
-                Productos productoActual = new Productos().Buscar("nombre", nombre);
+                var lookupProducto = await AppServices.Product.FindByNameAsync(nombre);
+                var productoActual = lookupProducto.Product ?? new Productos { Nombre = nombre };
 
                 var productos = new ListProduct()
                 {
@@ -155,10 +222,12 @@ namespace SistemaFerreteriaV8
                 // factura.tipoFactura = ... // si es necesario
 
                 await factura.ActualizarFacturaAsync();
+                MostrarEstado("Factura actualizada correctamente.");
                 MessageBox.Show("Factura actualizada correctamente.", "Actualización", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
+                MostrarEstado("No se encontró la factura para actualizar.", true);
                 MessageBox.Show("No se encontró la factura para actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
