@@ -42,6 +42,7 @@ namespace SistemaFerreteriaV8
             ModernizarControlesVenta();
             WireFastCheckoutEvents();
             _searchDebounceTimer.Tick += async (_, _) => await EjecutarBusquedaProductosAsync();
+            Resize += (_, _) => OrganizarLayoutPos();
         }
         private void AjustarAlineacionVisual()
         {
@@ -127,6 +128,15 @@ namespace SistemaFerreteriaV8
             UiConsistencia.AplicarBotonAccion(VentaRapida);
             UiConsistencia.AplicarBotonPeligro(Cancelar);
             UiConsistencia.AplicarBotonPrimario(Guardar);
+            UiConsistencia.AplicarBotonAccion(button1);
+            UiConsistencia.AplicarBotonAccion(button2);
+            UiConsistencia.AplicarBotonAccion(button3);
+            UiConsistencia.AplicarBotonPrimario(button6);
+            UiConsistencia.AplicarBotonPeligro(Eliminar);
+            UiConsistencia.AplicarBotonAccion(button4);
+            UiConsistencia.AplicarBotonPrimario(button5);
+            UiConsistencia.AplicarBotonAccion(mas);
+            UiConsistencia.AplicarBotonAccion(menos);
 
             UiConsistencia.AplicarGrid(ListaDeCompras);
             UiConsistencia.AplicarGrid(ListaProductos);
@@ -140,9 +150,102 @@ namespace SistemaFerreteriaV8
             UiConsistencia.AplicarPanelContenedor(groupBox1);
             UiConsistencia.AplicarPanelContenedor(groupBox2);
             UiConsistencia.AplicarPanelContenedor(groupBox3);
+            UiConsistencia.AplicarPanelContenedor(groupBox4);
+            UiConsistencia.AplicarPanelContenedor(Opciones);
+            UiConsistencia.AplicarPanelContenedor(BuscarPorNombreBox);
+            UiConsistencia.AplicarPanelContenedor(panel1);
+
+            AplicarJerarquiaAcciones();
+            AplicarJerarquiaTotales();
+            OrganizarLayoutPos();
 
             Aviso.Visible = false;
             statusTimer.Tick += (_, _) => { Aviso.Visible = false; statusTimer.Stop(); };
+        }
+
+        private void AplicarJerarquiaAcciones()
+        {
+            Cobrar.Font = new Font("Segoe UI", 12f, FontStyle.Bold);
+            Cobrar.Height = Math.Max(Cobrar.Height, 72);
+            Cobrar.Width = Math.Max(Cobrar.Width, 170);
+
+            Guardar.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            button6.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            button1.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            button2.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            button3.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            VentaRapida.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            button5.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+
+            mas.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+            menos.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+            mas.Height = 28;
+            menos.Height = 28;
+        }
+
+        private void AplicarJerarquiaTotales()
+        {
+            label7.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
+            label8.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
+            label13.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
+            label9.Font = new Font("Segoe UI", 12f, FontStyle.Bold);
+
+            SubTotal.Font = new Font("Segoe UI", 14f, FontStyle.Bold);
+            Descuento.Font = new Font("Segoe UI", 14f, FontStyle.Bold);
+            Total.Font = new Font("Segoe UI", 20f, FontStyle.Bold);
+            Total.ForeColor = Color.FromArgb(22, 163, 74);
+
+            N.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            N.ForeColor = UiConsistencia.TextoPrincipal;
+            N.BackColor = Color.FromArgb(226, 232, 240);
+            N.Padding = new Padding(6, 4, 6, 4);
+
+            Id.Font = new Font("Segoe UI", 12f, FontStyle.Bold);
+            Id.BackColor = Color.FromArgb(219, 234, 254);
+            Id.ForeColor = UiConsistencia.TextoPrincipal;
+        }
+
+        private void OrganizarLayoutPos()
+        {
+            var margin = 12;
+            var w = ClientSize.Width;
+            var h = ClientSize.Height;
+            if (w < 900 || h < 600) return;
+
+            var topHeight = 230;
+            var accionesWidth = 430;
+            var infoWidth = w - accionesWidth - (margin * 3);
+
+            groupBox2.SetBounds(margin, margin, infoWidth, topHeight);
+            Opciones.SetBounds(groupBox2.Right + margin, margin, accionesWidth, topHeight);
+
+            var listTop = groupBox2.Bottom + margin;
+            var bottomHeight = 210;
+            var listHeight = Math.Max(240, h - listTop - bottomHeight - (margin * 2));
+            groupBox1.SetBounds(margin, listTop, w - (margin * 2), listHeight);
+            ListaDeCompras.SetBounds(10, 24, groupBox1.Width - 20, groupBox1.Height - 34);
+
+            var bottomTop = groupBox1.Bottom + margin;
+            var notesWidth = (int)(w * 0.62);
+            groupBox3.SetBounds(margin, bottomTop, notesWidth - margin, bottomHeight);
+            groupBox4.SetBounds(groupBox3.Right + margin, bottomTop, w - groupBox3.Right - (margin * 2), bottomHeight);
+            panel1.SetBounds(10, 22, groupBox4.Width - 20, groupBox4.Height - 32);
+
+            var busquedaHeight = 136;
+            BuscarPorNombreBox.SetBounds(10, groupBox2.Height - busquedaHeight - 10, groupBox2.Width - 20, busquedaHeight);
+            label10.Top = 26;
+            NombreABuscar.SetBounds(102, 22, 220, 26);
+            ListaProductos.SetBounds(14, 52, BuscarPorNombreBox.Width - 28, busquedaHeight - 62);
+            BuscarPorNombreBox.Text = "Búsqueda rápida de producto";
+
+            groupBox2.Text = "Información de factura / cliente";
+            groupBox1.Text = "Lista de compra";
+            groupBox3.Text = "Observaciones y dirección de envío";
+            groupBox4.Text = "Resumen y totales";
+            Opciones.Text = "Acciones";
+
+            Cobrar.BringToFront();
+            Cobrar.Location = new Point(150, 78);
         }
 
         private void WireFastCheckoutEvents()
