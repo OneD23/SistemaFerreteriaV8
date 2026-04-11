@@ -31,9 +31,9 @@ namespace SistemaFerreteriaV8
 
         private void ModernizarCierreCaja()
         {
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
-            ConfigurarBoton(button1, Color.FromArgb(220, 38, 38));
-            ConfigurarBoton(button2, Color.FromArgb(14, 116, 144));
+            UiConsistencia.AplicarFormularioBase(this);
+            UiConsistencia.AplicarBotonPeligro(button1);
+            UiConsistencia.AplicarBotonPrimario(button2);
 
             ListaCompras.EnableHeadersVisualStyles = false;
             ListaCompras.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
@@ -43,19 +43,8 @@ namespace SistemaFerreteriaV8
             ListaCompras.GridColor = Color.FromArgb(226, 232, 240);
             ListaCompras.RowTemplate.Height = Math.Max(26, ListaCompras.RowTemplate.Height);
 
-            lblEstado.Left = 12;
-            lblEstado.Top = Math.Max(button1.Bottom, button2.Bottom) + 8;
+            UiConsistencia.AplicarStatusLabel(lblEstado, Math.Max(button1.Bottom, button2.Bottom) + 8);
             Controls.Add(lblEstado);
-        }
-
-        private static void ConfigurarBoton(Button button, Color backColor)
-        {
-            button.FlatStyle = FlatStyle.Flat;
-            button.FlatAppearance.BorderSize = 0;
-            button.BackColor = backColor;
-            button.ForeColor = Color.White;
-            button.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-            button.Height = Math.Max(34, button.Height);
         }
 
         private void ConfigurarAtajos()
@@ -78,9 +67,7 @@ namespace SistemaFerreteriaV8
 
         private void MostrarEstado(string message, bool error = false)
         {
-            lblEstado.Text = message;
-            lblEstado.ForeColor = error ? Color.Maroon : Color.DarkGreen;
-            lblEstado.Visible = true;
+            UiConsistencia.MostrarEstado(lblEstado, message, error);
         }
 
         private void AplicarJerarquiaResumen(double expected, double reported, double difference)

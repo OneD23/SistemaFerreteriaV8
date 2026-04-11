@@ -45,6 +45,7 @@ public sealed class VentanaPermisosUsuario : Form
 
     private void BuildLayout()
     {
+        UiConsistencia.AplicarFormularioBase(this);
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -79,6 +80,8 @@ public sealed class VentanaPermisosUsuario : Form
         splitRight.Controls.Add(Wrap("Deny directos", _chkDeny), 0, 1);
 
         var footer = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight };
+        UiConsistencia.AplicarBotonPrimario(_btnGuardar);
+        UiConsistencia.AplicarBotonAccion(_btnCerrar);
         _btnGuardar.Width = 180;
         _btnCerrar.Width = 120;
         footer.Controls.Add(_btnGuardar);

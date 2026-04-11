@@ -119,26 +119,17 @@ namespace SistemaFerreteriaV8
 
         private void ModernizarControlesVenta()
         {
-            ConfigurarBoton(Cobrar, Color.FromArgb(16, 185, 129), Color.White);
-            ConfigurarBoton(VentaRapida, Color.FromArgb(59, 130, 246), Color.White);
-            ConfigurarBoton(Cancelar, Color.FromArgb(220, 38, 38), Color.White);
-            ConfigurarBoton(Guardar, Color.FromArgb(14, 116, 144), Color.White);
+            UiConsistencia.AplicarFormularioBase(this);
+            UiConsistencia.AplicarBotonExito(Cobrar);
+            UiConsistencia.AplicarBotonAccion(VentaRapida);
+            UiConsistencia.AplicarBotonPeligro(Cancelar);
+            UiConsistencia.AplicarBotonPrimario(Guardar);
 
             EstilizarGrid(ListaDeCompras);
             EstilizarGrid(ListaProductos);
 
             Aviso.Visible = false;
             statusTimer.Tick += (_, _) => { Aviso.Visible = false; statusTimer.Stop(); };
-        }
-
-        private static void ConfigurarBoton(Button btn, Color backColor, Color foreColor)
-        {
-            btn.FlatStyle = FlatStyle.Flat;
-            btn.FlatAppearance.BorderSize = 0;
-            btn.BackColor = backColor;
-            btn.ForeColor = foreColor;
-            btn.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-            btn.Height = Math.Max(btn.Height, 34);
         }
 
         private static void EstilizarGrid(DataGridView grid)
@@ -206,9 +197,7 @@ namespace SistemaFerreteriaV8
 
         private void MostrarEstado(string message, bool isError)
         {
-            Aviso.Text = message;
-            Aviso.ForeColor = isError ? Color.Maroon : Color.DarkGreen;
-            Aviso.Visible = true;
+            UiConsistencia.MostrarEstado(Aviso, message, isError);
             statusTimer.Stop();
             statusTimer.Start();
         }

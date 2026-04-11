@@ -1,5 +1,6 @@
 using System.Drawing;
 using SistemaFerreteriaV8.AppCore.Abstractions;
+using SistemaFerreteriaV8.Clases;
 using SistemaFerreteriaV8.Infrastructure.Services;
 
 namespace SistemaFerreteriaV8;
@@ -34,6 +35,7 @@ public sealed class VentanaAuditoriaConsulta : Form
 
     private void BuildLayout()
     {
+        UiConsistencia.AplicarFormularioBase(this);
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2 };
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 120));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -56,6 +58,8 @@ public sealed class VentanaAuditoriaConsulta : Form
         filters.Controls.Add(_txtOperation, 3, 1);
         filters.Controls.Add(new Label { Text = "Límite", AutoSize = true, Top = 6 }, 4, 1);
         filters.Controls.Add(_numLimit, 5, 1);
+        UiConsistencia.AplicarBotonPrimario(_btnBuscar);
+        UiConsistencia.AplicarBotonAccion(_btnLimpiar);
         filters.Controls.Add(_btnBuscar, 6, 1);
         filters.Controls.Add(_btnLimpiar, 7, 1);
 

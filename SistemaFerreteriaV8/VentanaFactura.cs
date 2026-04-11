@@ -25,11 +25,11 @@ namespace SistemaFerreteriaV8
 
         private void ModernizarFormulario()
         {
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
-            ConfigurarBoton(Actualizar, Color.FromArgb(14, 116, 144));
-            ConfigurarBoton(Eliminar, Color.FromArgb(220, 38, 38));
-            ConfigurarBoton(button1, Color.FromArgb(59, 130, 246));
-            ConfigurarBoton(button2, Color.FromArgb(16, 185, 129));
+            UiConsistencia.AplicarFormularioBase(this);
+            UiConsistencia.AplicarBotonPrimario(Actualizar);
+            UiConsistencia.AplicarBotonPeligro(Eliminar);
+            UiConsistencia.AplicarBotonAccion(button1);
+            UiConsistencia.AplicarBotonExito(button2);
 
             dataGridView1.EnableHeadersVisualStyles = false;
             dataGridView1.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
@@ -39,19 +39,8 @@ namespace SistemaFerreteriaV8
             dataGridView1.GridColor = Color.FromArgb(226, 232, 240);
             dataGridView1.RowTemplate.Height = Math.Max(dataGridView1.RowTemplate.Height, 26);
 
-            lblEstado.Left = 12;
-            lblEstado.Top = Math.Max(button1.Bottom, button2.Bottom) + 10;
+            UiConsistencia.AplicarStatusLabel(lblEstado, Math.Max(button1.Bottom, button2.Bottom) + 10);
             Controls.Add(lblEstado);
-        }
-
-        private static void ConfigurarBoton(Button button, Color backColor)
-        {
-            button.FlatStyle = FlatStyle.Flat;
-            button.FlatAppearance.BorderSize = 0;
-            button.BackColor = backColor;
-            button.ForeColor = Color.White;
-            button.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-            button.Height = Math.Max(button.Height, 32);
         }
 
         private void ConfigurarAtajosTeclado()
@@ -78,9 +67,7 @@ namespace SistemaFerreteriaV8
 
         private void MostrarEstado(string mensaje, bool error = false)
         {
-            lblEstado.Text = mensaje;
-            lblEstado.ForeColor = error ? Color.Maroon : Color.DarkGreen;
-            lblEstado.Visible = true;
+            UiConsistencia.MostrarEstado(lblEstado, mensaje, error);
         }
 
         private void VentanaFactura_Load(object sender, EventArgs e)
