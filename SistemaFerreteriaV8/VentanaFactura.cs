@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualBasic;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Infrastructure.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,7 +71,7 @@ namespace SistemaFerreteriaV8
                     return;
                 }
 
-                Form1 frmPrincipal = Application.OpenForms["Form1"] as Form1;
+                Form1 frmPrincipal = WinFormsApp.OpenForms["Form1"] as Form1;
                 Empleado usuarioActual = frmPrincipal?.EmpleadoActivo;
 
                 Factura.MotivoEliminacion = motivo.Trim();
@@ -118,7 +119,8 @@ namespace SistemaFerreteriaV8
                     !double.TryParse(precioStr, out double precio))
                     continue;
 
-                Productos productoActual = new Productos().Buscar("nombre", nombre);
+                var lookupProducto = await AppServices.Product.FindByNameAsync(nombre);
+                var productoActual = lookupProducto.Product ?? new Productos { Nombre = nombre };
 
                 var productos = new ListProduct()
                 {

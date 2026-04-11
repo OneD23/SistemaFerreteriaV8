@@ -403,8 +403,8 @@ namespace SistemaFerreteriaV8
         }
         private void button16_Click(object sender, EventArgs e)
         {
-            Form1 frm = (Form1)Application.OpenForms["Form1"];
-            if (Application.OpenForms.OfType<Form1>().Any())
+            Form1 frm = (Form1)WinFormsApp.OpenForms["Form1"];
+            if (WinFormsApp.OpenForms.OfType<Form1>().Any())
             {
                 frm.AbrirFormulario(new Form());
             }
