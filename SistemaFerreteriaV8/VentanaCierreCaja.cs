@@ -34,14 +34,7 @@ namespace SistemaFerreteriaV8
             UiConsistencia.AplicarFormularioBase(this);
             UiConsistencia.AplicarBotonPeligro(button1);
             UiConsistencia.AplicarBotonPrimario(button2);
-
-            ListaCompras.EnableHeadersVisualStyles = false;
-            ListaCompras.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
-            ListaCompras.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            ListaCompras.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
-            ListaCompras.DefaultCellStyle.SelectionForeColor = Color.FromArgb(15, 23, 42);
-            ListaCompras.GridColor = Color.FromArgb(226, 232, 240);
-            ListaCompras.RowTemplate.Height = Math.Max(26, ListaCompras.RowTemplate.Height);
+            UiConsistencia.AplicarGrid(ListaCompras);
 
             UiConsistencia.AplicarStatusLabel(lblEstado, Math.Max(button1.Bottom, button2.Bottom) + 8);
             Controls.Add(lblEstado);

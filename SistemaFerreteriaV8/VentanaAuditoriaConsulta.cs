@@ -41,7 +41,12 @@ public sealed class VentanaAuditoriaConsulta : Form
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         var filters = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 8, Padding = new Padding(8) };
+        UiConsistencia.AplicarPanelContenedor(filters);
         for (var i = 0; i < 8; i++) filters.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5f));
+        UiConsistencia.AplicarInput(_txtActor);
+        UiConsistencia.AplicarInput(_cmbModule);
+        UiConsistencia.AplicarInput(_txtEvent);
+        UiConsistencia.AplicarInput(_txtOperation);
 
         filters.Controls.Add(_chkFrom, 0, 0);
         filters.Controls.Add(_from, 1, 0);
@@ -63,6 +68,7 @@ public sealed class VentanaAuditoriaConsulta : Form
         filters.Controls.Add(_btnBuscar, 6, 1);
         filters.Controls.Add(_btnLimpiar, 7, 1);
 
+        UiConsistencia.AplicarGrid(_grid);
         _grid.Columns.Add("TimestampUtc", "Fecha UTC");
         _grid.Columns.Add("Actor", "Usuario");
         _grid.Columns.Add("Module", "Módulo");
@@ -77,7 +83,6 @@ public sealed class VentanaAuditoriaConsulta : Form
         _grid.Columns[4].FillWeight = 8;
         _grid.Columns[5].FillWeight = 26;
         _grid.Columns[6].FillWeight = 18;
-        _grid.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
         _grid.Columns[5].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         _grid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;

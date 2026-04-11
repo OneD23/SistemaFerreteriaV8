@@ -61,6 +61,7 @@ public sealed class VentanaPermisosUsuario : Form
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
 
         _txtBuscar.Dock = DockStyle.Fill;
+        UiConsistencia.AplicarInput(_txtBuscar);
         _lstUsuarios.Dock = DockStyle.Fill;
         _lstRol.Dock = DockStyle.Fill;
         _lstEfectivos.Dock = DockStyle.Fill;
@@ -118,6 +119,7 @@ public sealed class VentanaPermisosUsuario : Form
     private static Control Wrap(string title, Control child)
     {
         var panel = new GroupBox { Text = title, Dock = DockStyle.Fill };
+        UiConsistencia.AplicarGrupo(panel);
         child.Dock = DockStyle.Fill;
         panel.Controls.Add(child);
         return panel;

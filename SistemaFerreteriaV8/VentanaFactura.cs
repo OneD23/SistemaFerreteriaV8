@@ -30,14 +30,11 @@ namespace SistemaFerreteriaV8
             UiConsistencia.AplicarBotonPeligro(Eliminar);
             UiConsistencia.AplicarBotonAccion(button1);
             UiConsistencia.AplicarBotonExito(button2);
-
-            dataGridView1.EnableHeadersVisualStyles = false;
-            dataGridView1.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
-            dataGridView1.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dataGridView1.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
-            dataGridView1.DefaultCellStyle.SelectionForeColor = Color.FromArgb(15, 23, 42);
-            dataGridView1.GridColor = Color.FromArgb(226, 232, 240);
-            dataGridView1.RowTemplate.Height = Math.Max(dataGridView1.RowTemplate.Height, 26);
+            UiConsistencia.AplicarGrid(dataGridView1);
+            UiConsistencia.AplicarInput(IdFactura);
+            UiConsistencia.AplicarInput(Cliente);
+            UiConsistencia.AplicarInput(Direccion);
+            UiConsistencia.AplicarInput(RNCCliente);
 
             UiConsistencia.AplicarStatusLabel(lblEstado, Math.Max(button1.Bottom, button2.Bottom) + 10);
             Controls.Add(lblEstado);

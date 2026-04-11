@@ -128,24 +128,21 @@ namespace SistemaFerreteriaV8
             UiConsistencia.AplicarBotonPeligro(Cancelar);
             UiConsistencia.AplicarBotonPrimario(Guardar);
 
-            EstilizarGrid(ListaDeCompras);
-            EstilizarGrid(ListaProductos);
+            UiConsistencia.AplicarGrid(ListaDeCompras);
+            UiConsistencia.AplicarGrid(ListaProductos);
+            UiConsistencia.AplicarInput(Id);
+            UiConsistencia.AplicarInput(NombreABuscar);
+            UiConsistencia.AplicarInput(NombreCliente);
+            UiConsistencia.AplicarInput(tipoFactura);
+            UiConsistencia.AplicarInput(FiltroDescuento);
+            UiConsistencia.AplicarInput(direccion);
+            UiConsistencia.AplicarInput(descripcion);
+            UiConsistencia.AplicarPanelContenedor(groupBox1);
+            UiConsistencia.AplicarPanelContenedor(groupBox2);
+            UiConsistencia.AplicarPanelContenedor(groupBox3);
 
             Aviso.Visible = false;
             statusTimer.Tick += (_, _) => { Aviso.Visible = false; statusTimer.Stop(); };
-        }
-
-        private static void EstilizarGrid(DataGridView grid)
-        {
-            grid.EnableHeadersVisualStyles = false;
-            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
-            grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            grid.DefaultCellStyle.BackColor = Color.White;
-            grid.DefaultCellStyle.ForeColor = Color.FromArgb(15, 23, 42);
-            grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
-            grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(15, 23, 42);
-            grid.RowTemplate.Height = Math.Max(grid.RowTemplate.Height, 26);
-            grid.GridColor = Color.FromArgb(226, 232, 240);
         }
 
         private void WireFastCheckoutEvents()
