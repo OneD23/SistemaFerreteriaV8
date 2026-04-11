@@ -40,10 +40,10 @@ namespace SistemaFerreteriaV8
             ListaFacturas.MultiSelect = false;
             ListaFacturas.ColumnHeadersHeight = 34;
             ListaFacturas.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
-            ListaFacturas.Column1.FillWeight = 12;
-            ListaFacturas.Column2.FillWeight = 46;
-            ListaFacturas.Column3.FillWeight = 20;
-            ListaFacturas.Column4.FillWeight = 22;
+            Column1.FillWeight = 12;
+            Column2.FillWeight = 46;
+            Column3.FillWeight = 20;
+            Column4.FillWeight = 22;
 
             UiConsistencia.AplicarBotonPrimario(button1); // Abrir factura
             UiConsistencia.AplicarBotonAccion(button3);   // Buscar por ID
