@@ -1,4 +1,8 @@
 ﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.AppCore.Abstractions;
+using SistemaFerreteriaV8.Domain.Security;
+using SistemaFerreteriaV8.Infrastructure.Security;
+using SistemaFerreteriaV8.Infrastructure.Services;
 using System;
 using System.Drawing;
 using System.Linq;
@@ -9,14 +13,17 @@ namespace SistemaFerreteriaV8
 {
     public partial class VentanaRegistroCaja : Form
     {
+        private readonly Label lblEstado = new Label { AutoSize = true, Visible = false };
         public VentanaRegistroCaja()
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            Codigo.UseSystemPasswordChar = true;
             AutoScroll = true;
             MinimumSize = new Size(560, 470);
             ModernizarUI();
             Resize += (_, __) => ReorganizarLayout();
+            ConfigurarAtajos();
         }
 
         private void ModernizarUI()
@@ -57,6 +64,10 @@ namespace SistemaFerreteriaV8
             y += gap;
             ConfigCampo(label4, turno, xLabel, xInput, wInput, y, h);
 
+            lblEstado.Left = xLabel;
+            lblEstado.Top = y + gap;
+            if (!Controls.Contains(lblEstado)) Controls.Add(lblEstado);
+
             int yBtns = ClientSize.Height - 70;
             int btnW = 130;
             int space = 20;
@@ -75,6 +86,31 @@ namespace SistemaFerreteriaV8
             input.Size = new System.Drawing.Size(wInput, h);
         }
 
+        private void ConfigurarAtajos()
+        {
+            KeyPreview = true;
+            KeyDown += async (_, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    await IniciarSeccionAsync();
+                }
+                else if (e.KeyCode == Keys.Escape)
+                {
+                    e.SuppressKeyPress = true;
+                    Close();
+                }
+            };
+        }
+
+        private void MostrarEstado(string message, bool error = false)
+        {
+            lblEstado.Text = message;
+            lblEstado.ForeColor = error ? Color.Maroon : Color.DarkGreen;
+            lblEstado.Visible = true;
+        }
+
         private void label1_Click(object sender, EventArgs e)
         {
             // Puedes agregar funcionalidad si necesitas
@@ -87,11 +123,11 @@ namespace SistemaFerreteriaV8
 
         private async void VentanaRegistroCaja_Load(object sender, EventArgs e)
         {
-            Caja nuevaCaja = await  Caja.BuscarPorClaveAsync("estado", "true");
-            if (nuevaCaja != null)
+            var cashState = await AppServices.CashRegister.ValidateOpenStateAsync();
+            if (cashState.Success && cashState.CajaActiva != null)
             {
-                turno.Text = nuevaCaja.Turno;
-                Balance.Text = nuevaCaja.BalanceInicial.ToString();
+                turno.Text = cashState.CajaActiva.Turno;
+                Balance.Text = cashState.CajaActiva.BalanceInicial.ToString();
                 turno.Enabled = false;
                 Balance.Enabled = false;
             }
@@ -112,50 +148,78 @@ namespace SistemaFerreteriaV8
 
         public async Task IniciarSeccionAsync()
         {
-            // Buscar empleado por contraseña
-            Empleado empleado = await Empleado.BuscarPorClaveAsync("contrasena", Codigo.Text);
-            if (empleado == null && Codigo.Text == "3322")
+            var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(Codigo.Text);
+            if (!auth.IsAuthenticated)
             {
-                empleado = new Empleado() { Nombre = "OneD", Puesto = "Administrador" };
+                MostrarEstado("Código incorrecto.", true);
+                MessageBox.Show("Código incorrecto");
+                Codigo.Text = "";
+                return;
             }
-            if (empleado != null || Codigo.Text == "3322")
+
+            if (!SecurityServices.AuthorizationService.HasPermission(auth, AppPermissions.CajaAbrir))
             {
-                // Buscar si ya hay una caja activa
-                var nuevaCaja = await  Caja.BuscarPorClaveAsync("estado", "true");
-                if (nuevaCaja == null)
+                MostrarEstado("Sin permiso para abrir caja.", true);
+                MessageBox.Show("Tu usuario no tiene permiso para abrir caja.", "Acceso denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Codigo.Text = "";
+                return;
+            }
+
+            var empleado = new Empleado
+            {
+                Id = MongoDB.Bson.ObjectId.TryParse(auth.EmployeeId, out var objectId)
+                    ? objectId
+                    : MongoDB.Bson.ObjectId.GenerateNewId(),
+                Nombre = auth.EmployeeName,
+                Puesto = auth.Role.ToString()
+            };
+
+            var cashState = await AppServices.CashRegister.GetActiveAsync(empleado.Nombre);
+            if (cashState.Success && cashState.CajaActiva != null)
+            {
+                turno.Text = cashState.CajaActiva.Turno;
+                Balance.Text = cashState.CajaActiva.BalanceInicial.ToString();
+                turno.Enabled = false;
+                Balance.Enabled = false;
+            }
+            else if (cashState.ErrorType == CashRegisterErrorType.NotFound)
+            {
+                if (!double.TryParse(Balance.Text, out var balanceInicial))
                 {
-                    nuevaCaja = new Caja
-                    {
-                        
-                        Turno = turno.Text,
-                        Estado = "true",
-                        FechaApertura = DateTime.Now,
-                        BalanceInicial = !string.IsNullOrWhiteSpace(Balance.Text) ? double.Parse(Balance.Text) : 0,
-                        Usuario = empleado.Nombre
-                    };
-                    await nuevaCaja.CrearAsync();
-                }
-                else
-                {
-                    turno.Text = nuevaCaja.Turno;
-                    Balance.Text = nuevaCaja.BalanceInicial.ToString();
-                    turno.Enabled = false;
-                    Balance.Enabled = false;
+                    MostrarEstado("Balance inicial inválido.", true);
+                    MessageBox.Show("El balance inicial no es válido.");
+                    return;
                 }
 
-                // Asignar empleado activo en Form1 si está abierto
-                if (Application.OpenForms.OfType<Form1>().Any())
+                var openResult = await AppServices.CashRegister.OpenAsync(
+                    new CashRegisterOpenRequest(turno.Text, balanceInicial, empleado.Nombre));
+                if (!openResult.Success)
                 {
-                    Form1 frm = (Form1)Application.OpenForms["Form1"];
-                    frm.EmpleadoActivo = empleado;
+                    MostrarEstado(openResult.Message, true);
+                    MessageBox.Show(openResult.Message, "Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
-                this.Dispose();
+
+                turno.Text = openResult.CajaActiva?.Turno ?? turno.Text;
+                Balance.Text = openResult.CajaActiva?.BalanceInicial.ToString() ?? Balance.Text;
+                turno.Enabled = false;
+                Balance.Enabled = false;
             }
             else
             {
-                MessageBox.Show("Código incorrecto");
-                Codigo.Text = "";
+                MostrarEstado(cashState.Message, true);
+                MessageBox.Show(cashState.Message, "Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
+
+            // Asignar empleado activo en Form1 si está abierto
+            if (WinFormsApp.OpenForms.OfType<Form1>().Any())
+            {
+                Form1 frm = (Form1)WinFormsApp.OpenForms["Form1"];
+                frm.EmpleadoActivo = empleado;
+            }
+            MostrarEstado("Sesión de caja iniciada correctamente.");
+            this.Dispose();
         }
     }
 }
