@@ -2,6 +2,7 @@
 using SistemaFerreteriaV8.Clases;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -11,6 +12,7 @@ namespace SistemaFerreteriaV8
     public partial class VentanaFacturasPorCobrar : Form
     {
         Factura Factura = null;
+        private readonly Label _lblContexto = new() { AutoSize = true };
 
         public VentanaFacturasPorCobrar()
         {
@@ -24,53 +26,77 @@ namespace SistemaFerreteriaV8
 
         private void ModernizarUI()
         {
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
+            UiConsistencia.AplicarFormularioBase(this);
+            FormBorderStyle = FormBorderStyle.Sizable;
+            MaximizeBox = true;
+            MinimizeBox = false;
+            Text = "Facturas por Cobrar";
 
-            ListaFacturas.BorderStyle = BorderStyle.None;
+            UiConsistencia.AplicarGrid(ListaFacturas);
+            ListaFacturas.BorderStyle = BorderStyle.FixedSingle;
             ListaFacturas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             ListaFacturas.RowHeadersVisible = false;
             ListaFacturas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             ListaFacturas.MultiSelect = false;
-            ListaFacturas.EnableHeadersVisualStyles = false;
-            ListaFacturas.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(24, 36, 60);
-            ListaFacturas.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
-            ListaFacturas.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(64, 85, 122);
-            ListaFacturas.DefaultCellStyle.ForeColor = System.Drawing.Color.White;
-            ListaFacturas.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(46, 74, 125);
-            ListaFacturas.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
+            ListaFacturas.ColumnHeadersHeight = 34;
+            ListaFacturas.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            ListaFacturas.Column1.FillWeight = 12;
+            ListaFacturas.Column2.FillWeight = 46;
+            ListaFacturas.Column3.FillWeight = 20;
+            ListaFacturas.Column4.FillWeight = 22;
 
-            foreach (var btn in new[] { button1, button2, button3, button4 })
-            {
-                btn.FlatStyle = FlatStyle.Flat;
-                btn.FlatAppearance.BorderSize = 0;
-                btn.Height = 42;
-            }
+            UiConsistencia.AplicarBotonPrimario(button1); // Abrir factura
+            UiConsistencia.AplicarBotonAccion(button3);   // Buscar por ID
+            UiConsistencia.AplicarBotonAccion(button4);   // Reimprimir
+            UiConsistencia.AplicarBotonPeligro(button2);  // Cancelar
 
             button1.Text = "Abrir factura";
             button3.Text = "Buscar por ID";
             button4.Text = "Reimprimir";
+            button2.Text = "Cancelar";
+            button1.Width = button2.Width = button3.Width = button4.Width = 170;
+            button1.Height = button2.Height = button3.Height = button4.Height = 44;
 
+            label1.Font = new Font("Segoe UI", 17f, FontStyle.Bold);
+            label1.Text = "Facturas pendientes de cobro";
+            label1.ForeColor = Color.White;
+
+            _lblContexto.Font = new Font("Segoe UI", 10f, FontStyle.Regular);
+            _lblContexto.ForeColor = Color.FromArgb(191, 219, 254);
+            _lblContexto.Text = "Seleccione una factura y ábrala para continuar en caja.";
+            if (!Controls.Contains(_lblContexto))
+            {
+                Controls.Add(_lblContexto);
+                _lblContexto.BringToFront();
+            }
+
+            BackColor = UiConsistencia.FondoPrincipal;
+            AcceptButton = button1;
+            CancelButton = button2;
             ReorganizarLayout();
         }
 
         private void ReorganizarLayout()
         {
             const int margen = 18;
-            label1.Left = (ClientSize.Width - label1.Width) / 2;
-            label1.Top = 22;
+            const int headerHeight = 82;
+            const int footerHeight = 74;
 
-            ListaFacturas.Location = new System.Drawing.Point(margen, label1.Bottom + 16);
-            ListaFacturas.Size = new System.Drawing.Size(ClientSize.Width - margen * 2, ClientSize.Height - 170);
+            label1.Left = margen;
+            label1.Top = margen;
+            _lblContexto.Left = margen;
+            _lblContexto.Top = label1.Bottom + 4;
 
-            int yBotones = ListaFacturas.Bottom + 14;
-            int espacio = 12;
-            int ancho = (ListaFacturas.Width - (espacio * 3)) / 4;
-            int x = ListaFacturas.Left;
+            ListaFacturas.Location = new Point(margen, headerHeight + margen);
+            ListaFacturas.Size = new Size(ClientSize.Width - (margen * 2), ClientSize.Height - headerHeight - footerHeight - (margen * 2));
 
+            var yBotones = ListaFacturas.Bottom + 14;
+            var espacio = 12;
+            var ancho = (ListaFacturas.Width - (espacio * 3)) / 4;
+            var x = ListaFacturas.Left;
             foreach (var btn in new[] { button1, button3, button4, button2 })
             {
-                btn.SetBounds(x, yBotones, ancho, 42);
+                btn.SetBounds(x, yBotones, ancho, 44);
                 x += ancho + espacio;
             }
         }
@@ -85,6 +111,7 @@ namespace SistemaFerreteriaV8
                 if (facturas == null || facturas.Count == 0)
                 {
                     MessageBox.Show("No se encontraron facturas pendientes de cobro.", "Información", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    _lblContexto.Text = "No hay facturas pendientes por cobrar en este momento.";
                     return;
                 }
 
@@ -98,6 +125,8 @@ namespace SistemaFerreteriaV8
                         factura.Total.ToString("C2")
                     );
                 }
+
+                _lblContexto.Text = $"Facturas pendientes cargadas: {facturas.Count}. Doble clic o use 'Abrir factura'.";
             }
             catch (Exception ex)
             {
