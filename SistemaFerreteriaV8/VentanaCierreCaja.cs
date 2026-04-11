@@ -19,11 +19,83 @@ namespace SistemaFerreteriaV8
         private double Vendido1, Registrado1;
         private Caja nueva;
         public Empleado empleadoActivo { get; set; }
+        private readonly Label lblEstado = new Label { AutoSize = true, Visible = false };
 
         public VentanaCierreCaja()
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            ModernizarCierreCaja();
+            ConfigurarAtajos();
+        }
+
+        private void ModernizarCierreCaja()
+        {
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            ConfigurarBoton(button1, Color.FromArgb(220, 38, 38));
+            ConfigurarBoton(button2, Color.FromArgb(14, 116, 144));
+
+            ListaCompras.EnableHeadersVisualStyles = false;
+            ListaCompras.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
+            ListaCompras.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            ListaCompras.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            ListaCompras.DefaultCellStyle.SelectionForeColor = Color.FromArgb(15, 23, 42);
+            ListaCompras.GridColor = Color.FromArgb(226, 232, 240);
+            ListaCompras.RowTemplate.Height = Math.Max(26, ListaCompras.RowTemplate.Height);
+
+            lblEstado.Left = 12;
+            lblEstado.Top = Math.Max(button1.Bottom, button2.Bottom) + 8;
+            Controls.Add(lblEstado);
+        }
+
+        private static void ConfigurarBoton(Button button, Color backColor)
+        {
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            button.BackColor = backColor;
+            button.ForeColor = Color.White;
+            button.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            button.Height = Math.Max(34, button.Height);
+        }
+
+        private void ConfigurarAtajos()
+        {
+            KeyPreview = true;
+            KeyDown += async (_, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    await CerrarCajaAsync();
+                }
+                else if (e.KeyCode == Keys.Escape)
+                {
+                    e.SuppressKeyPress = true;
+                    Close();
+                }
+            };
+        }
+
+        private void MostrarEstado(string message, bool error = false)
+        {
+            lblEstado.Text = message;
+            lblEstado.ForeColor = error ? Color.Maroon : Color.DarkGreen;
+            lblEstado.Visible = true;
+        }
+
+        private void AplicarJerarquiaResumen(double expected, double reported, double difference)
+        {
+            Sum.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+            Registrado.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+            Resultado.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+
+            Sum.ForeColor = Color.FromArgb(14, 116, 144);
+            Registrado.ForeColor = Color.FromArgb(30, 41, 59);
+            Resultado.ForeColor = Math.Abs(difference) < 0.01 ? Color.DarkGreen : Color.DarkRed;
+
+            MostrarEstado(Math.Abs(difference) < 0.01
+                ? "Cierre cuadrado correctamente."
+                : $"Atención: descuadre detectado ({difference:C2}).", Math.Abs(difference) >= 0.01);
         }
 
         private async void VentanaCierreCaja_Load(object sender, EventArgs e)
@@ -56,6 +128,7 @@ namespace SistemaFerreteriaV8
 
                 if (!preview.Success || nueva == null)
                 {
+                    MostrarEstado(preview.Message, true);
                     MessageBox.Show(preview.Message, "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     Close();
                     return;
@@ -89,6 +162,7 @@ namespace SistemaFerreteriaV8
 
                 Vendido1 = vendidoTotal;
                 Registrado1 = preview.ReportedBalance;
+                AplicarJerarquiaResumen(preview.ExpectedBalance, preview.ReportedBalance, preview.Difference);
             }
             catch (Exception ex)
             {
@@ -97,6 +171,11 @@ namespace SistemaFerreteriaV8
         }
 
         private async void button1_Click(object sender, EventArgs e)
+        {
+            await CerrarCajaAsync();
+        }
+
+        private async Task CerrarCajaAsync()
         {
             try
             {
@@ -107,10 +186,12 @@ namespace SistemaFerreteriaV8
                         DateTime.Now));
                 if (!closeResult.Success)
                 {
+                    MostrarEstado(closeResult.Message, true);
                     MessageBox.Show(closeResult.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
+                MostrarEstado("Caja cerrada correctamente.");
                 nueva = closeResult.CajaActiva;
                 var frm = WinFormsApp.OpenForms["Form1"] as Form1;
                 frm?.Dispose();
@@ -118,6 +199,7 @@ namespace SistemaFerreteriaV8
             }
             catch (Exception ex)
             {
+                MostrarEstado("Error al cerrar caja.", true);
                 MessageBox.Show($"Error al cerrar la caja: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
