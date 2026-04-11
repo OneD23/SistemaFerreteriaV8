@@ -42,6 +42,12 @@ namespace SistemaFerreteriaV8.Clases
         [BsonElement("sueldoMensual")]
         public double SueldoMensual { get; set; }
 
+        [BsonElement("permisosAllow")]
+        public List<string> PermisosAllow { get; set; } = new List<string>();
+
+        [BsonElement("permisosDeny")]
+        public List<string> PermisosDeny { get; set; } = new List<string>();
+
         private static IMongoCollection<Empleado> EmpleadoCollection =>
             new MongoClient(new OneKeys().URI)
                 .GetDatabase(new OneKeys().DatabaseName)
