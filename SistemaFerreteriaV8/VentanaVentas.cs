@@ -30,6 +30,8 @@ namespace SistemaFerreteriaV8
         double descuentoActivo = 0;
         public bool esCargada = false;
         private readonly System.Windows.Forms.Timer statusTimer = new System.Windows.Forms.Timer { Interval = 3500 };
+        private readonly System.Windows.Forms.Timer _searchDebounceTimer = new System.Windows.Forms.Timer { Interval = 180 };
+        private int _searchRequestVersion;
 
 
         public VentanaVentas()
@@ -39,6 +41,7 @@ namespace SistemaFerreteriaV8
             AjustarAlineacionVisual();
             ModernizarControlesVenta();
             WireFastCheckoutEvents();
+            _searchDebounceTimer.Tick += async (_, _) => await EjecutarBusquedaProductosAsync();
         }
         private void AjustarAlineacionVisual()
         {
@@ -147,11 +150,24 @@ namespace SistemaFerreteriaV8
 
         private void WireFastCheckoutEvents()
         {
+            KeyPreview = true;
             NombreABuscar.KeyDown += NombreABuscar_KeyDown;
             Id.KeyDown += (_, e) =>
             {
                 if (e.KeyCode == Keys.Enter)
                 {
+                    e.SuppressKeyPress = true;
+                }
+            };
+            KeyDown += (_, e) =>
+            {
+                if (e.KeyCode != Keys.Escape) return;
+                if (BuscarPorNombreBox.Visible)
+                {
+                    BuscarPorNombreBox.Visible = false;
+                    NombreABuscar.Clear();
+                    ListaProductos.Rows.Clear();
+                    Id.Focus();
                     e.SuppressKeyPress = true;
                 }
             };
@@ -178,13 +194,7 @@ namespace SistemaFerreteriaV8
 
             var id = firstRow.Cells[0].Value?.ToString();
             if (string.IsNullOrWhiteSpace(id)) return;
-
-            var lookup = await AppServices.Product.FindByCodeAsync(id);
-            if (lookup.Product == null)
-            {
-                MostrarEstado("El producto seleccionado ya no está disponible.", true);
-                return;
-            }
+            var nombre = firstRow.Cells[1].Value?.ToString() ?? id;
 
             codigoProducto = id;
             await DetectaProductoAsync();
@@ -192,7 +202,7 @@ namespace SistemaFerreteriaV8
             NombreABuscar.Clear();
             ListaProductos.Rows.Clear();
             Id.Focus();
-            MostrarEstado($"Producto '{lookup.Product.Nombre}' agregado.", false);
+            MostrarEstado($"Producto '{nombre}' agregado.", false);
         }
 
         private void MostrarEstado(string message, bool isError)
@@ -1052,7 +1062,8 @@ private void button10_Click(object sender, EventArgs e)
 
         private void MostrarAvisoDireccionFaltante()
         {
-            Aviso.Visible = true;
+            MostrarEstado("Debe indicar dirección para envíos.", true);
+            direccion.Focus();
             MessageBox.Show(
                 "La factura se marcó para enviar, debe agregar una dirección.",
                 "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error
@@ -1337,6 +1348,15 @@ private void button10_Click(object sender, EventArgs e)
 
         private async void textBox1_TextChanged(object sender, EventArgs e)
         {
+            _searchDebounceTimer.Stop();
+            _searchDebounceTimer.Start();
+            await Task.CompletedTask;
+        }
+
+        private async Task EjecutarBusquedaProductosAsync()
+        {
+            _searchDebounceTimer.Stop();
+            var requestVersion = ++_searchRequestVersion;
             ListaProductos.Rows.Clear();
 
             var term = NombreABuscar.Text?.Trim().ToLower();
@@ -1344,6 +1364,7 @@ private void button10_Click(object sender, EventArgs e)
             if (term.Length < 2) return;
 
             var searchResult = await AppServices.Product.SearchByNameAsync(term, limit: 30, excludeGeneric: true);
+            if (requestVersion != _searchRequestVersion) return;
             if (!searchResult.Success) return;
 
             foreach (var prod in searchResult.Products)
@@ -1380,6 +1401,7 @@ private void button10_Click(object sender, EventArgs e)
 
             ListaProductos.Rows.Clear();
             NombreABuscar.Clear();
+            Id.Focus();
         }
 
         #endregion
