@@ -29,6 +29,7 @@ namespace SistemaFerreteriaV8
         double totalActivo = 0;
         double descuentoActivo = 0;
         public bool esCargada = false;
+        private readonly Timer statusTimer = new Timer { Interval = 3500 };
 
 
         public VentanaVentas()
@@ -36,6 +37,8 @@ namespace SistemaFerreteriaV8
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
             AjustarAlineacionVisual();
+            ModernizarControlesVenta();
+            WireFastCheckoutEvents();
         }
         private void AjustarAlineacionVisual()
         {
@@ -112,6 +115,102 @@ namespace SistemaFerreteriaV8
             FiltroDescuento.Location = new Point(xValorTotales, FiltroDescuento.Location.Y);
             ADescontar.Location = new Point(xValorTotales + 50, ADescontar.Location.Y);
             ADescontar.Width = 120;
+        }
+
+        private void ModernizarControlesVenta()
+        {
+            ConfigurarBoton(Cobrar, Color.FromArgb(16, 185, 129), Color.White);
+            ConfigurarBoton(VentaRapida, Color.FromArgb(59, 130, 246), Color.White);
+            ConfigurarBoton(Cancelar, Color.FromArgb(220, 38, 38), Color.White);
+            ConfigurarBoton(Guardar, Color.FromArgb(14, 116, 144), Color.White);
+
+            EstilizarGrid(ListaDeCompras);
+            EstilizarGrid(ListaProductos);
+
+            Aviso.Visible = false;
+            statusTimer.Tick += (_, _) => { Aviso.Visible = false; statusTimer.Stop(); };
+        }
+
+        private static void ConfigurarBoton(Button btn, Color backColor, Color foreColor)
+        {
+            btn.FlatStyle = FlatStyle.Flat;
+            btn.FlatAppearance.BorderSize = 0;
+            btn.BackColor = backColor;
+            btn.ForeColor = foreColor;
+            btn.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            btn.Height = Math.Max(btn.Height, 34);
+        }
+
+        private static void EstilizarGrid(DataGridView grid)
+        {
+            grid.EnableHeadersVisualStyles = false;
+            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
+            grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            grid.DefaultCellStyle.BackColor = Color.White;
+            grid.DefaultCellStyle.ForeColor = Color.FromArgb(15, 23, 42);
+            grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(15, 23, 42);
+            grid.RowTemplate.Height = Math.Max(grid.RowTemplate.Height, 26);
+            grid.GridColor = Color.FromArgb(226, 232, 240);
+        }
+
+        private void WireFastCheckoutEvents()
+        {
+            NombreABuscar.KeyDown += NombreABuscar_KeyDown;
+            Id.KeyDown += (_, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                }
+            };
+        }
+
+        private async void NombreABuscar_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter) return;
+            e.SuppressKeyPress = true;
+
+            if (ListaProductos.Rows.Count == 0)
+            {
+                MostrarEstado("No se encontraron productos para el filtro actual.", true);
+                return;
+            }
+
+            await AgregarPrimerProductoFiltradoAsync();
+        }
+
+        private async Task AgregarPrimerProductoFiltradoAsync()
+        {
+            var firstRow = ListaProductos.Rows.Cast<DataGridViewRow>().FirstOrDefault(r => r.Cells[0]?.Value != null);
+            if (firstRow == null) return;
+
+            var id = firstRow.Cells[0].Value?.ToString();
+            if (string.IsNullOrWhiteSpace(id)) return;
+
+            var lookup = await AppServices.Product.FindByCodeAsync(id);
+            if (lookup.Product == null)
+            {
+                MostrarEstado("El producto seleccionado ya no está disponible.", true);
+                return;
+            }
+
+            codigoProducto = id;
+            await DetectaProductoAsync();
+            AsignarTotales();
+            NombreABuscar.Clear();
+            ListaProductos.Rows.Clear();
+            Id.Focus();
+            MostrarEstado($"Producto '{lookup.Product.Nombre}' agregado.", false);
+        }
+
+        private void MostrarEstado(string message, bool isError)
+        {
+            Aviso.Text = message;
+            Aviso.ForeColor = isError ? Color.Maroon : Color.DarkGreen;
+            Aviso.Visible = true;
+            statusTimer.Stop();
+            statusTimer.Start();
         }
 
         #region Limpieza del Formulario
@@ -917,10 +1016,12 @@ private void button10_Click(object sender, EventArgs e)
             var result = await RegistrarFacturaAsync(paid, preparation, isQuotation);
             if (!result.Success)
             {
+                MostrarEstado(result.Message, true);
                 MessageBox.Show(result.Message, "Error de persistencia", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
 
+            MostrarEstado("Operación completada correctamente.", false);
             return true;
         }
 
@@ -1251,6 +1352,7 @@ private void button10_Click(object sender, EventArgs e)
 
             var term = NombreABuscar.Text?.Trim().ToLower();
             if (string.IsNullOrEmpty(term)) return;
+            if (term.Length < 2) return;
 
             var searchResult = await AppServices.Product.SearchByNameAsync(term, limit: 30, excludeGeneric: true);
             if (!searchResult.Success) return;

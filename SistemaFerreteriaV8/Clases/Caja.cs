@@ -65,7 +65,7 @@ namespace SistemaFerreteriaV8.Clases
                     var partialOpenFilter = Builders<Caja>.Filter.Eq(c => c.Estado, EstadoAbierta);
                     var indexModel = new CreateIndexModel<Caja>(
                         Builders<Caja>.IndexKeys.Ascending(c => c.Estado),
-                        new CreateIndexOptions
+                        new CreateIndexOptions<Caja>
                         {
                             Name = "idx_caja_single_open_global",
                             Unique = true,
