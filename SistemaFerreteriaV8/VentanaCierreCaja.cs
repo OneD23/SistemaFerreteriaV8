@@ -1,5 +1,7 @@
 ﻿using Microsoft.VisualBasic;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.AppCore.Abstractions;
+using SistemaFerreteriaV8.Infrastructure.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,11 +19,83 @@ namespace SistemaFerreteriaV8
         private double Vendido1, Registrado1;
         private Caja nueva;
         public Empleado empleadoActivo { get; set; }
+        private readonly Label lblEstado = new Label { AutoSize = true, Visible = false };
 
         public VentanaCierreCaja()
         {
             InitializeComponent();
             SistemaFerreteriaV8.Clases.ThemeManager.ApplyToForm(this);
+            ModernizarCierreCaja();
+            ConfigurarAtajos();
+        }
+
+        private void ModernizarCierreCaja()
+        {
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            ConfigurarBoton(button1, Color.FromArgb(220, 38, 38));
+            ConfigurarBoton(button2, Color.FromArgb(14, 116, 144));
+
+            ListaCompras.EnableHeadersVisualStyles = false;
+            ListaCompras.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
+            ListaCompras.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            ListaCompras.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            ListaCompras.DefaultCellStyle.SelectionForeColor = Color.FromArgb(15, 23, 42);
+            ListaCompras.GridColor = Color.FromArgb(226, 232, 240);
+            ListaCompras.RowTemplate.Height = Math.Max(26, ListaCompras.RowTemplate.Height);
+
+            lblEstado.Left = 12;
+            lblEstado.Top = Math.Max(button1.Bottom, button2.Bottom) + 8;
+            Controls.Add(lblEstado);
+        }
+
+        private static void ConfigurarBoton(Button button, Color backColor)
+        {
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            button.BackColor = backColor;
+            button.ForeColor = Color.White;
+            button.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            button.Height = Math.Max(34, button.Height);
+        }
+
+        private void ConfigurarAtajos()
+        {
+            KeyPreview = true;
+            KeyDown += async (_, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    await CerrarCajaAsync();
+                }
+                else if (e.KeyCode == Keys.Escape)
+                {
+                    e.SuppressKeyPress = true;
+                    Close();
+                }
+            };
+        }
+
+        private void MostrarEstado(string message, bool error = false)
+        {
+            lblEstado.Text = message;
+            lblEstado.ForeColor = error ? Color.Maroon : Color.DarkGreen;
+            lblEstado.Visible = true;
+        }
+
+        private void AplicarJerarquiaResumen(double expected, double reported, double difference)
+        {
+            Sum.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+            Registrado.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+            Resultado.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+
+            Sum.ForeColor = Color.FromArgb(14, 116, 144);
+            Registrado.ForeColor = Color.FromArgb(30, 41, 59);
+            Resultado.ForeColor = Math.Abs(difference) < 0.01 ? Color.DarkGreen : Color.DarkRed;
+
+            MostrarEstado(Math.Abs(difference) < 0.01
+                ? "Cierre cuadrado correctamente."
+                : $"Atención: descuadre detectado ({difference:C2}).", Math.Abs(difference) >= 0.01);
         }
 
         private async void VentanaCierreCaja_Load(object sender, EventArgs e)
@@ -46,26 +120,24 @@ namespace SistemaFerreteriaV8
                         MessageBox.Show("Por favor, ingrese un valor numérico válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-                // Buscar la caja activa async (esto no bloquea el UI)
-                nueva = await Task.Run(() =>  Caja.BuscarPorClaveAsync("estado", "true"));
+                var usuarioCaja = string.IsNullOrWhiteSpace(empleadoActivo?.Nombre) ? "Genérico" : empleadoActivo.Nombre;
+                var preview = await AppServices.CashRegister.BuildClosePreviewAsync(
+                    new CashRegisterClosePreviewRequest(usuarioCaja, balanceAlCierre, DateTime.Now));
 
-                // Verificar si existe una caja activa
-                if (nueva == null)
+                nueva = preview.CajaActiva;
+
+                if (!preview.Success || nueva == null)
                 {
-                    MessageBox.Show("No existen cajas activas.", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MostrarEstado(preview.Message, true);
+                    MessageBox.Show(preview.Message, "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     Close();
                     return;
                 }
 
-                // Mostrar la fecha de apertura
                 fecha.Text = nueva.FechaApertura.ToShortDateString();
 
-                // Obtener facturas válidas asociadas a la empresa
-                var (listaFacturas, total) = await Task.Run(() => Factura.ListarFacturasCierre("nombreEmpresa", nueva.Id));
-
-                // Agregar facturas al DataGridView
                 ListaCompras.Rows.Clear();
-                foreach (var item in listaFacturas)
+                foreach (var item in preview.RelatedInvoices ?? Array.Empty<Factura.FacturaResumen>())
                 {
                     ListaCompras.Rows.Add(
                         item.Id,
@@ -77,23 +149,20 @@ namespace SistemaFerreteriaV8
                     );
                 }
 
-                // Calcular totales e información financiera
-                double totalCaja = nueva.BalanceInicial + total;
+                var vendidoTotal = preview.ExpectedBalance - nueva.BalanceInicial;
                 MontoApertura.Text = nueva.BalanceInicial.ToString("C2");
-                Vendido.Text = total.ToString("C2");
-                Sum.Text = totalCaja.ToString("C2");
-                Registrado.Text = balanceAlCierre.ToString("C2");
-                Usuario.Text = string.IsNullOrWhiteSpace(empleadoActivo?.Nombre) ? "Genérico" : empleadoActivo.Nombre;
+                Vendido.Text = vendidoTotal.ToString("C2");
+                Sum.Text = preview.ExpectedBalance.ToString("C2");
+                Registrado.Text = preview.ReportedBalance.ToString("C2");
+                Usuario.Text = usuarioCaja;
 
-                // Verificar el cuadre de caja
-                double descuadre = totalCaja - balanceAlCierre;
-                Resultado.Text = Math.Abs(descuadre) < 0.01
+                Resultado.Text = Math.Abs(preview.Difference) < 0.01
                     ? "Cuadre Exitoso"
-                    : $"Existe un descuadre de {descuadre.ToString("C2")}";
+                    : $"Existe un descuadre de {preview.Difference.ToString("C2")}";
 
-                // Guardar valores globales
-                Vendido1 = total;
-                Registrado1 = balanceAlCierre;
+                Vendido1 = vendidoTotal;
+                Registrado1 = preview.ReportedBalance;
+                AplicarJerarquiaResumen(preview.ExpectedBalance, preview.ReportedBalance, preview.Difference);
             }
             catch (Exception ex)
             {
@@ -103,16 +172,34 @@ namespace SistemaFerreteriaV8
 
         private async void button1_Click(object sender, EventArgs e)
         {
+            await CerrarCajaAsync();
+        }
+
+        private async Task CerrarCajaAsync()
+        {
             try
             {
-                nueva.Estado = "false";
-                await Task.Run(() => nueva.EditarAsync());
-                var frm = Application.OpenForms["Form1"] as Form1;
+                var closeResult = await AppServices.CashRegister.CloseAsync(
+                    new CashRegisterCloseRequest(
+                        Usuario.Text,
+                        Registrado1,
+                        DateTime.Now));
+                if (!closeResult.Success)
+                {
+                    MostrarEstado(closeResult.Message, true);
+                    MessageBox.Show(closeResult.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                MostrarEstado("Caja cerrada correctamente.");
+                nueva = closeResult.CajaActiva;
+                var frm = WinFormsApp.OpenForms["Form1"] as Form1;
                 frm?.Dispose();
                 this.Dispose();
             }
             catch (Exception ex)
             {
+                MostrarEstado("Error al cerrar caja.", true);
                 MessageBox.Show($"Error al cerrar la caja: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

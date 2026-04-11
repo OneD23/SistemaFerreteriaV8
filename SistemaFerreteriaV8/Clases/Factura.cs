@@ -3,7 +3,9 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using Octetus.ConsultasDgii.Services;
+using SistemaFerreteriaV8.AppCore.Abstractions;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Infrastructure.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -222,19 +224,24 @@ namespace SistemaFerreteriaV8.Clases
                 if (item?.Producto == null || item.Cantidad <= 0)
                     continue;
 
-                Productos productoActual = null;
-                if (!string.IsNullOrWhiteSpace(item.Producto.Id))
-                    productoActual = new Productos().Buscar(item.Producto.Id);
+                var adjust = await AppServices.Product.AdjustStockAsync(new StockAdjustmentRequest(
+                    item.Producto.Id ?? string.Empty,
+                    item.Producto.Nombre ?? string.Empty,
+                    QuantityDelta: item.Cantidad,
+                    SoldDelta: -item.Cantidad,
+                    Reason: "invoice_delete_restock"));
 
-                if (productoActual == null && !string.IsNullOrWhiteSpace(item.Producto.Nombre))
-                    productoActual = new Productos().Buscar("nombre", item.Producto.Nombre);
-
-                if (productoActual == null)
-                    continue;
-
-                productoActual.Cantidad += item.Cantidad;
-                productoActual.Vendido = Math.Max(0, productoActual.Vendido - item.Cantidad);
-                await productoActual.ActualizarProductosAsync();
+                if (!adjust.Success)
+                {
+                    await AppServices.Audit.WriteAsync(
+                        "inventory.restock_failed",
+                        "inventario",
+                        "warning",
+                        adjust.Message,
+                        this.IdEmpleado,
+                        this.NombreCliente,
+                        new { this.Id, product = item.Producto.Nombre, item.Cantidad });
+                }
             }
         }
 
@@ -436,11 +443,19 @@ namespace SistemaFerreteriaV8.Clases
 
         public async Task RegistrarProductosAsync(int signo)
         {
+            if (this.Productos == null) return;
+
             foreach (var item in this.Productos)
             {
-                item.Producto.Vendido += signo * item.Cantidad;
-                item.Producto.Cantidad -= signo * item.Cantidad;
-                item.Producto.ActualizarProductos();
+                if (item?.Producto == null || item.Cantidad <= 0)
+                    continue;
+
+                await AppServices.Product.AdjustStockAsync(new StockAdjustmentRequest(
+                    item.Producto.Id ?? string.Empty,
+                    item.Producto.Nombre ?? string.Empty,
+                    QuantityDelta: -(signo * item.Cantidad),
+                    SoldDelta: signo * item.Cantidad,
+                    Reason: "invoice_register_products"));
             }
         }
 
