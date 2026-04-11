@@ -51,6 +51,12 @@ internal static class UiConsistencia
         comboBox.ForeColor = TextoPrincipal;
     }
 
+    public static void AplicarInput(Label label)
+    {
+        label.BackColor = Color.Transparent;
+        label.ForeColor = TextoPrincipal;
+    }
+
     public static void AplicarPanelContenedor(Control control)
     {
         control.BackColor = PanelClaro;
