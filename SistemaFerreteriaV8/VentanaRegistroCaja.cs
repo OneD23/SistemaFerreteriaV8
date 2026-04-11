@@ -13,6 +13,7 @@ namespace SistemaFerreteriaV8
 {
     public partial class VentanaRegistroCaja : Form
     {
+        private readonly Label lblEstado = new Label { AutoSize = true, Visible = false };
         public VentanaRegistroCaja()
         {
             InitializeComponent();
@@ -22,6 +23,7 @@ namespace SistemaFerreteriaV8
             MinimumSize = new Size(560, 470);
             ModernizarUI();
             Resize += (_, __) => ReorganizarLayout();
+            ConfigurarAtajos();
         }
 
         private void ModernizarUI()
@@ -62,6 +64,10 @@ namespace SistemaFerreteriaV8
             y += gap;
             ConfigCampo(label4, turno, xLabel, xInput, wInput, y, h);
 
+            lblEstado.Left = xLabel;
+            lblEstado.Top = y + gap;
+            if (!Controls.Contains(lblEstado)) Controls.Add(lblEstado);
+
             int yBtns = ClientSize.Height - 70;
             int btnW = 130;
             int space = 20;
@@ -78,6 +84,31 @@ namespace SistemaFerreteriaV8
             label.Size = new System.Drawing.Size(150, h);
             input.Location = new System.Drawing.Point(xInput, y);
             input.Size = new System.Drawing.Size(wInput, h);
+        }
+
+        private void ConfigurarAtajos()
+        {
+            KeyPreview = true;
+            KeyDown += async (_, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    await IniciarSeccionAsync();
+                }
+                else if (e.KeyCode == Keys.Escape)
+                {
+                    e.SuppressKeyPress = true;
+                    Close();
+                }
+            };
+        }
+
+        private void MostrarEstado(string message, bool error = false)
+        {
+            lblEstado.Text = message;
+            lblEstado.ForeColor = error ? Color.Maroon : Color.DarkGreen;
+            lblEstado.Visible = true;
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -120,6 +151,7 @@ namespace SistemaFerreteriaV8
             var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(Codigo.Text);
             if (!auth.IsAuthenticated)
             {
+                MostrarEstado("Código incorrecto.", true);
                 MessageBox.Show("Código incorrecto");
                 Codigo.Text = "";
                 return;
@@ -127,6 +159,7 @@ namespace SistemaFerreteriaV8
 
             if (!SecurityServices.AuthorizationService.HasPermission(auth, AppPermissions.CajaAbrir))
             {
+                MostrarEstado("Sin permiso para abrir caja.", true);
                 MessageBox.Show("Tu usuario no tiene permiso para abrir caja.", "Acceso denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Codigo.Text = "";
                 return;
@@ -153,6 +186,7 @@ namespace SistemaFerreteriaV8
             {
                 if (!double.TryParse(Balance.Text, out var balanceInicial))
                 {
+                    MostrarEstado("Balance inicial inválido.", true);
                     MessageBox.Show("El balance inicial no es válido.");
                     return;
                 }
@@ -161,6 +195,7 @@ namespace SistemaFerreteriaV8
                     new CashRegisterOpenRequest(turno.Text, balanceInicial, empleado.Nombre));
                 if (!openResult.Success)
                 {
+                    MostrarEstado(openResult.Message, true);
                     MessageBox.Show(openResult.Message, "Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
@@ -172,6 +207,7 @@ namespace SistemaFerreteriaV8
             }
             else
             {
+                MostrarEstado(cashState.Message, true);
                 MessageBox.Show(cashState.Message, "Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -182,6 +218,7 @@ namespace SistemaFerreteriaV8
                 Form1 frm = (Form1)WinFormsApp.OpenForms["Form1"];
                 frm.EmpleadoActivo = empleado;
             }
+            MostrarEstado("Sesión de caja iniciada correctamente.");
             this.Dispose();
         }
     }
