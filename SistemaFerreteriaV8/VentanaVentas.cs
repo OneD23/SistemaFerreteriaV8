@@ -29,7 +29,7 @@ namespace SistemaFerreteriaV8
         double totalActivo = 0;
         double descuentoActivo = 0;
         public bool esCargada = false;
-        private readonly Timer statusTimer = new Timer { Interval = 3500 };
+        private readonly System.Windows.Forms.Timer statusTimer = new System.Windows.Forms.Timer { Interval = 3500 };
 
 
         public VentanaVentas()
