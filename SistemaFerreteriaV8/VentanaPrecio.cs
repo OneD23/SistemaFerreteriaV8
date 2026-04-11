@@ -1,5 +1,6 @@
-﻿using Microsoft.VisualBasic;
-using SistemaFerreteriaV8.Clases;
+﻿using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Domain.Security;
+using SistemaFerreteriaV8.Infrastructure.Security;
 using System;
 using System.Windows.Forms;
 
@@ -36,10 +37,12 @@ namespace SistemaFerreteriaV8
             // Si se selecciona la columna especial (administrador)
             if (e.ColumnIndex == 3)
             {
-                var clave = Interaction.InputBox("Necesita la clave de un administrador para continuar");
-                var empleado = await Empleado.BuscarPorClaveAsync("contrasena", clave);
+                var clave = SecurityPrompt.PromptPassword(
+                    "Necesita la clave de un administrador para continuar.",
+                    "Autorización requerida");
+                var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(clave);
 
-                if (empleado != null && empleado.Puesto == "Administrador")
+                if (SecurityServices.AuthorizationService.HasPermission(auth, AppPermissions.VentasCambiarPrecio))
                 {
                     CambiarPrecioSeleccionado(e.RowIndex, e.ColumnIndex);
                 }
@@ -57,7 +60,7 @@ namespace SistemaFerreteriaV8
         // Método para cambiar el precio de manera segura
         private void CambiarPrecioSeleccionado(int rowIndex, int columnIndex)
         {
-            var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+            var frm = WinFormsApp.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
             if (frm != null)
             {
                 string valorCelda = frm.obtenerValorDeCelda(ListaPrecio.Rows[rowIndex].Cells[columnIndex]);
@@ -73,10 +76,12 @@ namespace SistemaFerreteriaV8
             int row = ListaPrecio.CurrentCell.RowIndex;
             if (col == 3)
             {
-                var clave = Interaction.InputBox("Necesita la clave de un administrador para continuar");
-                var empleado = await Empleado.BuscarPorClaveAsync("contrasena", clave);
+                var clave = SecurityPrompt.PromptPassword(
+                    "Necesita la clave de un administrador para continuar.",
+                    "Autorización requerida");
+                var auth = await SecurityServices.AuthenticationService.AuthenticateAsync(clave);
 
-                if (empleado != null && empleado.Puesto == "Administrador")
+                if (SecurityServices.AuthorizationService.HasPermission(auth, AppPermissions.VentasCambiarPrecio))
                 {
                     CambiarPrecioSeleccionado(row, col);
                 }
