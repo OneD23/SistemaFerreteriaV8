@@ -8,6 +8,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SistemaFerreteriaV8.Clases;
+using SistemaFerreteriaV8.Domain.Security;
+using SistemaFerreteriaV8.Infrastructure.Security;
 using System.IO;
 using System.Drawing.Printing;
 
@@ -439,8 +441,17 @@ namespace SistemaFerreteriaV8
         {
             Server.Text = "";
         }
-        private void VentanaConfiguraciones_Load(object sender, EventArgs e)
+        private async void VentanaConfiguraciones_Load(object sender, EventArgs e)
         {
+            if (!await PermissionAccess.EnsurePermissionAsync(
+                    PermissionAccess.GetActiveEmployee(),
+                    AppPermissions.ConfiguracionEditar,
+                    this,
+                    "acceder a Configuración"))
+            {
+                Close();
+                return;
+            }
 
             Configuraciones config = new Configuraciones().ObtenerPorId(1);
             if (config != null) { 
