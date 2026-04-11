@@ -1,6 +1,7 @@
 ﻿using SistemaFerreteriaV8.Clases;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -9,6 +10,8 @@ namespace SistemaFerreteriaV8
 {
     public partial class ListaDeEnvios : Form
     {
+        private readonly Label _lblContexto = new() { AutoSize = true };
+
         public ListaDeEnvios()
         {
             InitializeComponent();
@@ -21,44 +24,65 @@ namespace SistemaFerreteriaV8
 
         private void ModernizarUI()
         {
-            ListaEnvios.BorderStyle = BorderStyle.None;
+            UiConsistencia.AplicarFormularioBase(this);
+            Text = "Lista de Envíos";
+
+            UiConsistencia.AplicarGrid(ListaEnvios);
+            ListaEnvios.BorderStyle = BorderStyle.FixedSingle;
             ListaEnvios.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             ListaEnvios.RowHeadersVisible = false;
             ListaEnvios.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             ListaEnvios.MultiSelect = false;
-            ListaEnvios.EnableHeadersVisualStyles = false;
-            ListaEnvios.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(24, 36, 60);
-            ListaEnvios.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
-            ListaEnvios.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(64, 85, 122);
-            ListaEnvios.DefaultCellStyle.ForeColor = System.Drawing.Color.White;
-            ListaEnvios.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(46, 74, 125);
-            ListaEnvios.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
+            ListaEnvios.ColumnHeadersHeight = 34;
+            Column1.FillWeight = 10;
+            Column2.FillWeight = 30;
+            Column3.FillWeight = 16;
+            Column4.FillWeight = 28;
+            Column5.FillWeight = 16;
 
             button4.Text = "Registrar entrega";
             button5.Text = "Cerrar";
-            foreach (var btn in new[] { button4, button5 })
+            UiConsistencia.AplicarBotonPrimario(button4);
+            UiConsistencia.AplicarBotonAccion(button5);
+            button4.Width = button5.Width = 200;
+            button4.Height = button5.Height = 44;
+
+            label1.Font = new Font("Segoe UI", 17f, FontStyle.Bold);
+            label1.Text = "Entregas pendientes";
+            label1.ForeColor = Color.White;
+
+            _lblContexto.Font = new Font("Segoe UI", 10f, FontStyle.Regular);
+            _lblContexto.ForeColor = Color.FromArgb(191, 219, 254);
+            _lblContexto.Text = "Seleccione una factura para registrar su entrega.";
+            if (!Controls.Contains(_lblContexto))
             {
-                btn.FlatStyle = FlatStyle.Flat;
-                btn.FlatAppearance.BorderSize = 0;
-                btn.Height = 40;
+                Controls.Add(_lblContexto);
+                _lblContexto.BringToFront();
             }
+
+            AcceptButton = button4;
+            CancelButton = button5;
 
             ReorganizarLayout();
         }
 
         private void ReorganizarLayout()
         {
-            const int margen = 18;
-            label1.Left = (ClientSize.Width - label1.Width) / 2;
-            label1.Top = 22;
+            const int margen = 16;
+            const int headerHeight = 84;
+            const int footerHeight = 74;
+            label1.Left = margen;
+            label1.Top = margen;
+            _lblContexto.Left = margen;
+            _lblContexto.Top = label1.Bottom + 4;
 
-            ListaEnvios.Location = new System.Drawing.Point(margen, label1.Bottom + 16);
-            ListaEnvios.Size = new System.Drawing.Size(ClientSize.Width - margen * 2, ClientSize.Height - 140);
+            ListaEnvios.Location = new Point(margen, headerHeight + margen);
+            ListaEnvios.Size = new Size(ClientSize.Width - (margen * 2), ClientSize.Height - headerHeight - footerHeight - (margen * 2));
 
-            int y = ListaEnvios.Bottom + 12;
-            int anchoBtn = 180;
-            button5.SetBounds(ClientSize.Width - margen - anchoBtn, y, anchoBtn, 40);
-            button4.SetBounds(button5.Left - 12 - anchoBtn, y, anchoBtn, 40);
+            int y = ListaEnvios.Bottom + 14;
+            int anchoBtn = 200;
+            button5.SetBounds(ClientSize.Width - margen - anchoBtn, y, anchoBtn, 44);
+            button4.SetBounds(button5.Left - 12 - anchoBtn, y, anchoBtn, 44);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -87,6 +111,8 @@ namespace SistemaFerreteriaV8
                         );
                     }
                 }
+
+                _lblContexto.Text = $"Pendientes para enviar: {ListaEnvios.Rows.Count}.";
             }
             catch (Exception ex)
             {
@@ -138,7 +164,7 @@ namespace SistemaFerreteriaV8
                         );
 
                         // Actualizar VentanaVentas si está abierta
-                        var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+                        var frm = WinFormsApp.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
                         if (frm != null)
                         {
                             await frm.CargarFacturaAsync(factura);
@@ -180,7 +206,7 @@ namespace SistemaFerreteriaV8
             if (!string.IsNullOrWhiteSpace(id))
             {
                 var factura = await Factura.BuscarAsync(id);
-                var frm = Application.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
+                var frm = WinFormsApp.OpenForms.OfType<VentanaVentas>().FirstOrDefault();
                 if (frm != null)
                 {
                     await frm.CargarFacturaAsync(factura);
