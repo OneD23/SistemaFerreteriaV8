@@ -15,11 +15,15 @@ public sealed class VentanaPermisosUsuario : Form
     private readonly CheckedListBox _chkAllow = new();
     private readonly CheckedListBox _chkDeny = new();
     private readonly Button _btnGuardar = new() { Text = "Guardar overrides" };
+    private readonly Button _btnCerrar = new() { Text = "Cerrar" };
     private readonly Label _lblEstado = new() { AutoSize = true };
     private readonly Label _lblUsuarioRol = new() { AutoSize = true, Text = "Usuario: - | Rol: -" };
+    private readonly Label _lblPendiente = new() { AutoSize = true, Text = "Sin cambios pendientes", ForeColor = Color.DarkGreen };
 
     private List<Empleado> _usuarios = new();
     private UserPermissionSnapshot? _snapshotActual;
+    private bool _cambiosPendientes;
+    private bool _syncingChecks;
 
     public VentanaPermisosUsuario()
     {
@@ -27,6 +31,7 @@ public sealed class VentanaPermisosUsuario : Form
         Width = 980;
         Height = 620;
         StartPosition = FormStartPosition.CenterParent;
+        KeyPreview = true;
 
         BuildLayout();
         WireEvents();
@@ -75,8 +80,11 @@ public sealed class VentanaPermisosUsuario : Form
 
         var footer = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight };
         _btnGuardar.Width = 180;
+        _btnCerrar.Width = 120;
         footer.Controls.Add(_btnGuardar);
+        footer.Controls.Add(_btnCerrar);
         footer.Controls.Add(_lblUsuarioRol);
+        footer.Controls.Add(_lblPendiente);
         footer.Controls.Add(_lblEstado);
 
         root.Controls.Add(_txtBuscar, 0, 0);
@@ -99,6 +107,9 @@ public sealed class VentanaPermisosUsuario : Form
         _chkAllow.BackColor = Color.FromArgb(236, 253, 245);
         _chkDeny.BackColor = Color.FromArgb(254, 242, 242);
         _lstEfectivos.BackColor = Color.FromArgb(239, 246, 255);
+
+        AcceptButton = _btnGuardar;
+        CancelButton = _btnCerrar;
     }
 
     private static Control Wrap(string title, Control child)
@@ -114,6 +125,10 @@ public sealed class VentanaPermisosUsuario : Form
         _txtBuscar.TextChanged += (_, _) => FiltrarUsuarios();
         _lstUsuarios.SelectedIndexChanged += async (_, _) => await CargarSnapshotSeleccionadoAsync();
         _btnGuardar.Click += async (_, _) => await GuardarOverridesAsync();
+        _btnCerrar.Click += (_, _) => Close();
+        _chkAllow.ItemCheck += (_, _) => MarkPendingChanges();
+        _chkDeny.ItemCheck += (_, _) => MarkPendingChanges();
+        KeyDown += VentanaPermisosUsuario_KeyDown;
     }
 
     private async Task CargarUsuariosAsync()
@@ -121,6 +136,7 @@ public sealed class VentanaPermisosUsuario : Form
         var all = await SecurityServices.EmployeeRepository.ListAsync();
         _usuarios = all.OrderBy(u => u.Nombre).ToList();
         FiltrarUsuarios();
+        _txtBuscar.Focus();
     }
 
     private void FiltrarUsuarios()
@@ -150,11 +166,20 @@ public sealed class VentanaPermisosUsuario : Form
         foreach (var p in _snapshotActual.RolePermissions.OrderBy(x => x)) _lstRol.Items.Add(p);
         foreach (var p in _snapshotActual.EffectivePermissions.OrderBy(x => x)) _lstEfectivos.Items.Add(p);
 
-        SyncChecks(_chkAllow, _snapshotActual.AllowOverrides);
-        SyncChecks(_chkDeny, _snapshotActual.DenyOverrides);
+        _syncingChecks = true;
+        try
+        {
+            SyncChecks(_chkAllow, _snapshotActual.AllowOverrides);
+            SyncChecks(_chkDeny, _snapshotActual.DenyOverrides);
+        }
+        finally
+        {
+            _syncingChecks = false;
+        }
 
         _lblUsuarioRol.Text = $"Usuario: {_snapshotActual.EmployeeName} | Rol: {(empleado.Puesto ?? "sin_rol")}";
         _lblEstado.Text = $"Snapshot cargado: {_snapshotActual.EffectivePermissions.Count} permisos efectivos";
+        SetPendingChanges(false);
     }
 
     private static void SyncChecks(CheckedListBox list, IReadOnlyCollection<string> selected)
@@ -187,6 +212,41 @@ public sealed class VentanaPermisosUsuario : Form
         await SecurityServices.UserPermissionService.SetOverridesAsync(_snapshotActual.EmployeeId, allow, deny);
         await CargarSnapshotSeleccionadoAsync();
         _lblEstado.Text = $"Overrides guardados correctamente ({DateTime.Now:HH:mm:ss})";
+        SetPendingChanges(false);
         MessageBox.Show("Permisos guardados correctamente.", "Permisos", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private void MarkPendingChanges()
+    {
+        if (_syncingChecks || _snapshotActual == null)
+            return;
+
+        SetPendingChanges(true);
+    }
+
+    private void SetPendingChanges(bool hasPendingChanges)
+    {
+        _cambiosPendientes = hasPendingChanges;
+        _lblPendiente.Text = hasPendingChanges ? "Cambios pendientes (Ctrl+S para guardar)" : "Sin cambios pendientes";
+        _lblPendiente.ForeColor = hasPendingChanges ? Color.DarkOrange : Color.DarkGreen;
+    }
+
+    private async void VentanaPermisosUsuario_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Control && e.KeyCode == Keys.S)
+        {
+            e.SuppressKeyPress = true;
+            if (_cambiosPendientes)
+            {
+                await GuardarOverridesAsync();
+            }
+            return;
+        }
+
+        if (e.Control && e.KeyCode == Keys.W)
+        {
+            e.SuppressKeyPress = true;
+            Close();
+        }
     }
 }

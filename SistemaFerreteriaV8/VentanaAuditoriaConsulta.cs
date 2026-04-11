@@ -16,6 +16,8 @@ public sealed class VentanaAuditoriaConsulta : Form
     private readonly TextBox _txtOperation = new();
     private readonly NumericUpDown _numLimit = new() { Minimum = 20, Maximum = 1000, Value = 300 };
     private readonly Button _btnBuscar = new() { Text = "Consultar" };
+    private readonly Button _btnLimpiar = new() { Text = "Limpiar filtros" };
+    private readonly Label _lblResumen = new() { AutoSize = true, Text = "Resultados: 0" };
     private readonly DataGridView _grid = new() { Dock = DockStyle.Fill, ReadOnly = true, AllowUserToAddRows = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
 
     public VentanaAuditoriaConsulta()
@@ -24,6 +26,7 @@ public sealed class VentanaAuditoriaConsulta : Form
         Width = 1200;
         Height = 640;
         StartPosition = FormStartPosition.CenterParent;
+        KeyPreview = true;
 
         BuildLayout();
         WireEvents();
@@ -54,6 +57,7 @@ public sealed class VentanaAuditoriaConsulta : Form
         filters.Controls.Add(new Label { Text = "Límite", AutoSize = true, Top = 6 }, 4, 1);
         filters.Controls.Add(_numLimit, 5, 1);
         filters.Controls.Add(_btnBuscar, 6, 1);
+        filters.Controls.Add(_btnLimpiar, 7, 1);
 
         _grid.Columns.Add("TimestampUtc", "Fecha UTC");
         _grid.Columns.Add("Actor", "Usuario");
@@ -72,17 +76,31 @@ public sealed class VentanaAuditoriaConsulta : Form
         _grid.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
         _grid.Columns[5].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         _grid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+        _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+        _grid.MultiSelect = false;
 
         _cmbModule.Items.AddRange(new object[] { "", "ventas", "caja", "inventario", "security", "permissions" });
 
+        var gridPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2 };
+        gridPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+        gridPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        var hdr = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, Padding = new Padding(8, 4, 8, 0) };
+        hdr.Controls.Add(_lblResumen);
+        gridPanel.Controls.Add(hdr, 0, 0);
+        gridPanel.Controls.Add(_grid, 0, 1);
+
         root.Controls.Add(filters, 0, 0);
-        root.Controls.Add(_grid, 0, 1);
+        root.Controls.Add(gridPanel, 0, 1);
         Controls.Add(root);
+
+        AcceptButton = _btnBuscar;
     }
 
     private void WireEvents()
     {
         _btnBuscar.Click += async (_, _) => await ConsultarAsync();
+        _btnLimpiar.Click += (_, _) => LimpiarFiltros();
+        KeyDown += VentanaAuditoriaConsulta_KeyDown;
     }
 
     private async Task ConsultarAsync()
@@ -121,6 +139,13 @@ public sealed class VentanaAuditoriaConsulta : Form
                 else if (string.Equals(item.Result, "ok", StringComparison.OrdinalIgnoreCase) || string.Equals(item.Result, "confirmed", StringComparison.OrdinalIgnoreCase))
                     row.DefaultCellStyle.BackColor = Color.Honeydew;
             }
+
+            _lblResumen.Text = $"Resultados: {results.Count}";
+            if (_grid.Rows.Count > 0)
+            {
+                _grid.ClearSelection();
+                _grid.Rows[0].Selected = true;
+            }
         }
         catch (Exception ex)
         {
@@ -129,6 +154,36 @@ public sealed class VentanaAuditoriaConsulta : Form
         finally
         {
             _btnBuscar.Enabled = true;
+        }
+    }
+
+    private void LimpiarFiltros()
+    {
+        _chkFrom.Checked = true;
+        _chkTo.Checked = true;
+        _from.Value = DateTime.Today.AddDays(-7);
+        _to.Value = DateTime.Today;
+        _txtActor.Text = string.Empty;
+        _cmbModule.Text = string.Empty;
+        _txtEvent.Text = string.Empty;
+        _txtOperation.Text = string.Empty;
+        _numLimit.Value = 300;
+        _txtActor.Focus();
+    }
+
+    private async void VentanaAuditoriaConsulta_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Control && e.KeyCode == Keys.F)
+        {
+            e.SuppressKeyPress = true;
+            _txtActor.Focus();
+            return;
+        }
+
+        if (e.KeyCode == Keys.F5)
+        {
+            e.SuppressKeyPress = true;
+            await ConsultarAsync();
         }
     }
 
